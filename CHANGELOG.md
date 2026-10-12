@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.0.0-beta5 - 2026-10-12
 
 ### Changed
 
@@ -27,16 +27,16 @@
 - cPanel hosting accounts can now be connected with the HTTPS cPanel address
   (panel URL), the cPanel username and an API token. HQ lists WordPress at the
   root of each domain, creates and lists whole-account backups (they count
-  against the account's disk quota), shows the domain error log, and sets up
-  Novamira: through WP Toolkit when the account has it, otherwise, after your
-  approval, through a temporary installer that removes itself after one run;
-  when Novamira is already installed, HQ uploads only that installer, no ZIP.
+  against the account's disk quota), and sets up Novamira: through WP Toolkit
+  when the account has it, otherwise, after your approval, through a temporary
+  installer that removes itself after one run; when Novamira is already
+  installed, HQ uploads only that installer, no ZIP.
   Restoring backups, clearing caches and changing PHP are not available
   through cPanel's user API.
 - WHM servers can now be connected with the HTTPS WHM address and a root API
   token. HQ lists WordPress at the root of every cPanel account's domains,
-  creates and lists account backups, reads error logs, and installs Novamira
-  through WHM's WP Toolkit or, with your approval, a temporary installer.
+  creates and lists account backups, and installs Novamira through WHM's WP
+  Toolkit or, with your approval, a temporary installer.
 
 ### Fixed
 
