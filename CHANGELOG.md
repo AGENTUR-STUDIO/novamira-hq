@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Changed
+
+- The bundled Novamira CLI is updated to 1.3.4. On Windows, a site profile
+  that stores its credentials in a file can log in again after its stored
+  credential is removed, including after a failed token refresh, instead of
+  stopping with an internal error.
+
 ### Added
 
 - Configure your AI now includes Antigravity. Antigravity cannot add a local
