@@ -40,6 +40,11 @@
 
 ### Fixed
 
+- On Windows, Novamira HQ no longer stops at startup with "The application
+  acknowledgement record is unreadable or unsafe" when the Windows user name
+  (or the folder that holds HQ's data) contains letters outside ASCII, such as
+  Ö, Ş or é. HQ passed those paths to its permission check in a form Windows
+  PowerShell misread.
 - On Windows, opening Novamira HQ from the Start menu no longer leaves a
   console or Windows Terminal window open beside the app.
 - On macOS, Claude Code started from a terminal no longer stops with
