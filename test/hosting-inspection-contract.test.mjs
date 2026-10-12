@@ -97,6 +97,46 @@ test("cPanel offers its error log and account backups, and no cache or activity"
   );
 });
 
+test("WHM offers the same error log and account backups as cPanel", async () => {
+  assert.deepEqual(
+    hostingInspectionOptions("whm"),
+    hostingInspectionOptions("cpanel"),
+  );
+  assert.deepEqual(
+    hostingInspectionOptions("whm").map((option) => option.id),
+    ["logs:error", "backups"],
+  );
+  const { client, calls } = fixture("whm", {
+    listEnvironments: async () => [{ id: "wptest:wp.example.test" }],
+  });
+  const logs = await inspectHosting(client, {
+    siteId: "wptest:wp.example.test",
+    environmentId: "wptest:wp.example.test",
+    option: "logs:error",
+    limit: 20,
+  });
+  assert.deepEqual(calls.at(-1), {
+    kind: "logs",
+    envId: "wptest:wp.example.test",
+    fileName: "error",
+    lines: 20,
+  });
+  assert.equal(logs.note, "Latest entries of the domain's error log.");
+  await inspectHosting(client, {
+    siteId: "wptest:wp.example.test",
+    environmentId: "wptest:wp.example.test",
+    option: "backups",
+  });
+  assert.deepEqual(calls.at(-1), {
+    kind: "backups",
+    envId: "wptest:wp.example.test",
+  });
+  await assert.rejects(
+    inspectHosting(client, { ...target, option: "logs:access" }),
+    { code: "provider_unsupported" },
+  );
+});
+
 test("typed cache scopes dispatch no arbitrary native body and do not claim completion", async () => {
   for (const provider of [
     "kinsta",

@@ -47,6 +47,9 @@ const PLACEHOLDER = "registry-fake-credential-not-a-real-secret";
  * one before they will construct at all.
  */
 const IDENTITY = "registry-fake-identity";
+
+/** WHM only connects as root, so its identity half is fixed. */
+const identityFor = (kind) => (kind === "whm" ? "root" : IDENTITY);
 const absentExtensionsFetch = async () =>
   new Response("[]", { headers: { "content-type": "application/json" } });
 
@@ -65,12 +68,12 @@ async function isolatedStore() {
 test("the registry covers every provider kind exactly once", () => {
   const keys = Object.keys(PROVIDER_REGISTRY);
   assert.deepEqual([...keys].sort(), [...PROVIDER_KINDS].sort());
-  assert.equal(keys.length, 11);
+  assert.equal(keys.length, 12);
   assert.equal(new Set(keys).size, keys.length);
 
   // Distinct constructors: a copy-paste in the map would alias two providers.
   const factories = Object.values(PROVIDER_REGISTRY);
-  assert.equal(new Set(factories).size, 11);
+  assert.equal(new Set(factories).size, 12);
   for (const kind of PROVIDER_KINDS) {
     assert.equal(
       typeof PROVIDER_REGISTRY[kind],
@@ -80,7 +83,7 @@ test("the registry covers every provider kind exactly once", () => {
   }
 });
 
-test("registeredProviders reports all eleven in taxonomy order", () => {
+test("registeredProviders reports all twelve in taxonomy order", () => {
   assert.deepEqual(registeredProviders(PROVIDER_REGISTRY), [...PROVIDER_KINDS]);
 });
 
@@ -103,7 +106,7 @@ test("every registered factory builds a working client from a profile", async ()
         credential: envCredential(defaultCredentialEnv(kind)),
         // Doubles as the identity for the providers that need one, and keeps
         // construction from having to read the environment.
-        companyId: IDENTITY,
+        companyId: identityFor(kind),
         ...(kind === "plesk"
           ? { apiBaseUrl: "https://plesk.example.invalid:8443" }
           : {}),
@@ -229,7 +232,7 @@ async function actionSupport(kind, request) {
     await state.store.upsertHostingProfile(kind, {
       provider: kind,
       credential: envCredential(defaultCredentialEnv(kind)),
-      companyId: IDENTITY,
+      companyId: identityFor(kind),
     });
     const client = await factory.clientFromProfile(kind);
     try {
@@ -257,7 +260,7 @@ test("ENVIRONMENT_PUSH_PROVIDERS is exactly the clients advertising safe envs.pu
       await state.store.upsertHostingProfile(kind, {
         provider: kind,
         credential: envCredential(defaultCredentialEnv(kind)),
-        companyId: IDENTITY,
+        companyId: identityFor(kind),
         ...(kind === "plesk"
           ? { apiBaseUrl: "https://plesk.example.invalid:8443" }
           : {}),
@@ -313,6 +316,7 @@ test("NOVAMIRA_SETUP_PROVIDERS supports observable WP-CLI or bounded provider AP
       kind === "cloudways" ||
       kind === "plesk" ||
       kind === "cpanel" ||
+      kind === "whm" ||
       (supported && wpCliResultsObservable(client));
     assert.equal(
       NOVAMIRA_SETUP_PROVIDERS.has(kind),
@@ -328,6 +332,7 @@ test("NOVAMIRA_SETUP_PROVIDERS supports observable WP-CLI or bounded provider AP
     "kinsta",
     "plesk",
     "rocketnet",
+    "whm",
   ]);
   // The labels are what a disabled "Setup Novamira" button names, so they must
   // stay the same three providers spelled the way the rest of HQ spells them.

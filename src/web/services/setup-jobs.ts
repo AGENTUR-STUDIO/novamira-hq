@@ -104,7 +104,7 @@ export interface SetupJobStartInput {
   readonly envId: string;
   /** Explicit activation on an existing installation; new installs enable it. */
   readonly aiAbilities: boolean;
-  /** cPanel without WP Toolkit: explicit approval for the temporary installer. */
+  /** cPanel (directly or through WHM) without WP Toolkit: explicit approval for the temporary installer. */
   readonly temporaryInstaller?: boolean;
 }
 

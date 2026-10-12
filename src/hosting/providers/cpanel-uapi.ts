@@ -118,11 +118,16 @@ export interface CpanelApi {
     argv: readonly string[],
     signal?: AbortSignal,
   ): Promise<string>;
+  /** Releases resources a transport opened for this run (WHM's temporary session). */
+  close?(): Promise<void>;
 }
 
-const TOOLKIT_INSTALLATIONS = "/v1/installations";
+/** The installation list: also the path whose 401/403/404 mean "no WP Toolkit". */
+export const TOOLKIT_INSTALLATIONS = "/v1/installations";
 /** What the installation list answers when WP Toolkit is not available. */
-const NO_TOOLKIT_STATUSES: ReadonlySet<number> = new Set([401, 403, 404]);
+export const NO_TOOLKIT_STATUSES: ReadonlySet<number> = new Set([
+  401, 403, 404,
+]);
 /** Rate limiting and gateway failures say nothing about the response shape. */
 const BUSY_STATUSES: ReadonlySet<number> = new Set([429, 502, 503, 504]);
 
@@ -167,10 +172,18 @@ function toolkitInstallation(item: unknown): ToolkitInstallation {
   };
 }
 
+/** Maps a WP Toolkit installation list; anything but a valid array throws. */
+export function parseToolkitInstallations(
+  value: unknown,
+): readonly ToolkitInstallation[] {
+  if (!Array.isArray(value)) throw invalidInstallations();
+  return value.map(toolkitInstallation);
+}
+
 const CERTIFICATE_CODES =
   /CERT|SELF_SIGNED|UNABLE_TO_VERIFY|ERR_TLS|UNABLE_TO_GET_ISSUER/;
 
-function certificateFailure(error: unknown): boolean {
+export function certificateFailure(error: unknown): boolean {
   for (
     let current: unknown = error, depth = 0;
     current !== undefined && current !== null && depth < 5;
@@ -187,11 +200,11 @@ const NOT_A_PANEL =
   "This address did not answer as a cPanel panel. Check the cPanel address (for example https://server.example.com:2083).";
 
 /**
- * UAPI answers every known function with a JSON envelope, even for a missing
- * file. A 404, or a successful answer that is not JSON (a web page), means
- * the address is not a cPanel panel.
+ * UAPI and WHM API 1 answer every known function with a JSON envelope, even
+ * for a missing file. A 404, or a successful answer that is not JSON (a web
+ * page), means the address is not a cPanel or WHM server.
  */
-function notPanel(error: unknown): boolean {
+export function notAnApiAnswer(error: unknown): boolean {
   if (!(error instanceof CliError)) return false;
   const status = error.details?.status;
   return (
@@ -230,6 +243,85 @@ async function guarded<T>(run: () => Promise<T>): Promise<T> {
   }
 }
 
+/**
+ * Reads a UAPI envelope: `data` when `status` is 1, otherwise a provider error
+ * carrying the first cPanel error. Shared by every transport that returns the
+ * envelope unchanged (cPanel's own API and WHM's `uapi_cpanel` proxy).
+ */
+export function uapiEnvelopeData(
+  value: unknown,
+  module: string,
+  fn: string,
+): unknown {
+  const envelope = asRecord(value);
+  if (envelope === undefined || typeof envelope.status !== "number")
+    throw new CliError(
+      "provider_error",
+      "cPanel returned an unexpected response; check the panel address.",
+    );
+  if (envelope.status === 1) return envelope.data;
+  const errors = Array.isArray(envelope.errors)
+    ? envelope.errors.filter(
+        (entry): entry is string => typeof entry === "string",
+      )
+    : [];
+  throw new CliError(
+    "provider_error",
+    `cPanel ${module}::${fn} failed${
+      errors[0] === undefined ? "." : `: ${errors[0].slice(0, 300)}`
+    }`,
+  );
+}
+
+/**
+ * Runs one WP-CLI command (an argv array, never a shell string) through WP
+ * Toolkit's internal WP-CLI endpoint and returns its stdout, whatever the
+ * transport `wpt` is. Any answer that is not exactly `{exitCode: 0, stdout,
+ * stderr}` is refused.
+ */
+export async function runWpCli(
+  wpt: CpanelApi["wpt"],
+  installationId: number,
+  argv: readonly string[],
+  signal?: AbortSignal,
+): Promise<string> {
+  let value: unknown;
+  try {
+    value = await wpt(
+      `/v1/installations/${String(installationId)}/features/wp-cli`,
+      {
+        method: "POST",
+        json: { command: argv, env: null },
+        ...(signal === undefined ? {} : { signal }),
+        timeoutMs: 60_000,
+      },
+    );
+  } catch (error) {
+    // An HTTP answer other than a rejected credential or a busy server
+    // means the endpoint no longer behaves as observed (a string `command`
+    // answers HTTP 500). Busy answers keep the HTTP client's retryable
+    // error; transport failures, timeouts and aborts keep their own.
+    const status =
+      error instanceof CliError ? error.details?.status : undefined;
+    if (
+      error instanceof CliError &&
+      error.code !== "credential_invalid" &&
+      typeof status === "number" &&
+      !BUSY_STATUSES.has(status)
+    )
+      throw unconfirmedCommand(status);
+    throw error;
+  }
+  const result = asRecord(value);
+  if (
+    result?.exitCode !== 0 ||
+    typeof result.stdout !== "string" ||
+    typeof result.stderr !== "string"
+  )
+    throw unconfirmedCommand();
+  return result.stdout;
+}
+
 export function createCpanelApi(context: ProviderClientContext): CpanelApi {
   const target = cpanelTarget(context);
   const token = context.secret.reveal();
@@ -266,28 +358,12 @@ export function createCpanelApi(context: ProviderClientContext): CpanelApi {
               }),
         });
       } catch (error) {
-        if (notPanel(error)) throw new CliError("provider_error", NOT_A_PANEL);
+        if (notAnApiAnswer(error))
+          throw new CliError("provider_error", NOT_A_PANEL);
         throw error;
       }
     });
-    const envelope = asRecord(value);
-    if (envelope === undefined || typeof envelope.status !== "number")
-      throw new CliError(
-        "provider_error",
-        "cPanel returned an unexpected response; check the panel address.",
-      );
-    if (envelope.status === 1) return envelope.data;
-    const errors = Array.isArray(envelope.errors)
-      ? envelope.errors.filter(
-          (entry): entry is string => typeof entry === "string",
-        )
-      : [];
-    throw new CliError(
-      "provider_error",
-      `cPanel ${module}::${fn} failed${
-        errors[0] === undefined ? "." : `: ${errors[0].slice(0, 300)}`
-      }`,
-    );
+    return uapiEnvelopeData(value, module, fn);
   }
   const api: CpanelApi = {
     username: target.username,
@@ -349,46 +425,15 @@ export function createCpanelApi(context: ProviderClientContext): CpanelApi {
         TOOLKIT_INSTALLATIONS,
         signal === undefined ? {} : { signal },
       );
-      if (value === undefined) return undefined;
-      if (!Array.isArray(value)) throw invalidInstallations();
-      return value.map(toolkitInstallation);
+      return value === undefined ? undefined : parseToolkitInstallations(value);
     },
-    async wpCli(installationId, argv, signal) {
-      let value: unknown;
-      try {
-        value = await api.wpt(
-          `/v1/installations/${String(installationId)}/features/wp-cli`,
-          {
-            method: "POST",
-            json: { command: argv, env: null },
-            ...(signal === undefined ? {} : { signal }),
-            timeoutMs: 60_000,
-          },
-        );
-      } catch (error) {
-        // An HTTP answer other than a rejected credential or a busy server
-        // means the endpoint no longer behaves as observed (a string `command`
-        // answers HTTP 500). Busy answers keep the HTTP client's retryable
-        // error; transport failures, timeouts and aborts keep their own.
-        const status =
-          error instanceof CliError ? error.details?.status : undefined;
-        if (
-          error instanceof CliError &&
-          error.code !== "credential_invalid" &&
-          typeof status === "number" &&
-          !BUSY_STATUSES.has(status)
-        )
-          throw unconfirmedCommand(status);
-        throw error;
-      }
-      const result = asRecord(value);
-      if (
-        result?.exitCode !== 0 ||
-        typeof result.stdout !== "string" ||
-        typeof result.stderr !== "string"
-      )
-        throw unconfirmedCommand();
-      return result.stdout;
+    wpCli(installationId, argv, signal) {
+      return runWpCli(
+        (path, init) => api.wpt(path, init),
+        installationId,
+        argv,
+        signal,
+      );
     },
   };
   return api;

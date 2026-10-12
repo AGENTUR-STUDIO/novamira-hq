@@ -280,12 +280,12 @@ export interface ActionCreateBackupRequest {
   readonly envId: string;
   readonly body?: ActionBody;
   /**
-   * Ends a provider that waits for the backup to finish (cPanel). Providers
+   * Ends a provider that waits for the backup to finish (cPanel, WHM). Providers
    * that only start it ignore this.
    */
   readonly signal?: AbortSignal;
   /**
-   * `false` asks a provider that waits for the backup to finish (cPanel) to
+   * `false` asks a provider that waits for the backup to finish (cPanel, WHM) to
    * start it and return at once; MCP never blocks on it. Default `true`;
    * providers that only start the backup ignore it.
    */
@@ -350,7 +350,7 @@ export type ActionRequest =
       readonly kind: "setup-novamira";
       readonly envId: string;
       readonly enableAiAbilities?: boolean;
-      /** cPanel without WP Toolkit: explicit approval for the temporary installer. */
+      /** cPanel (directly or through WHM) without WP Toolkit: explicit approval for the temporary installer. */
       readonly allowTemporaryInstaller?: boolean;
       readonly signal?: AbortSignal;
     }

@@ -28,6 +28,7 @@ import { createPantheonClient } from "./pantheon.js";
 import { createPressableClient } from "./pressable.js";
 import { createPleskClient } from "./plesk.js";
 import { createRocketNetClient } from "./rocketnet.js";
+import { createWhmClient } from "./whm.js";
 import { createWpEngineClient } from "./wpengine.js";
 import { createXCloudClient } from "./xcloud.js";
 
@@ -49,6 +50,7 @@ export const PROVIDER_REGISTRY: Readonly<
   plesk: createPleskClient,
   xcloud: createXCloudClient,
   cpanel: createCpanelClient,
+  whm: createWhmClient,
 };
 
 export {
@@ -61,6 +63,7 @@ export {
   createPressableClient,
   createPleskClient,
   createRocketNetClient,
+  createWhmClient,
   createWpEngineClient,
   createXCloudClient,
 };

@@ -26,6 +26,10 @@
   when Novamira is already installed, HQ uploads only that installer, no ZIP.
   Restoring backups, clearing caches and changing PHP are not available
   through cPanel's user API.
+- WHM servers can now be connected with the HTTPS WHM address and a root API
+  token. HQ lists WordPress at the root of every cPanel account's domains,
+  creates and lists account backups, reads error logs, and installs Novamira
+  through WHM's WP Toolkit or, with your approval, a temporary installer.
 
 ### Fixed
 

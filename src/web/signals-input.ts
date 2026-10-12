@@ -259,7 +259,7 @@ export function parseDiagnostics(
  */
 export interface SetupInput {
   readonly enableAiAbilities: boolean;
-  /** cPanel without WP Toolkit: explicit approval for the temporary installer. */
+  /** cPanel (directly or through WHM) without WP Toolkit: explicit approval for the temporary installer. */
   readonly allowTemporaryInstaller: boolean;
 }
 

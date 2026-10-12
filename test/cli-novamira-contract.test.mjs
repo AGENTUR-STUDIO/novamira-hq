@@ -1938,43 +1938,50 @@ test("--force suppresses the already-installed hint and its probe", async () => 
   );
 });
 
-test("--temporary-installer reaches a cPanel setup as its explicit approval, and only when given", async () => {
-  for (const flag of [true, false]) {
-    const requests = [];
-    const client = {
-      ...fakeClient(),
-      provider: "cpanel",
-      async action(request) {
-        requests.push(request);
-        return {
-          provider: "cpanel",
-          action: "novamira.setup",
-          status: 200,
-          raw: {
-            siteUrl: "https://wp.example.test/",
-            version: "1.12.8",
-            aiEnabled: true,
-            warnings: [],
-          },
-        };
-      },
-    };
-    const { envelope } = await harness({ client }).run([
-      "setup",
-      "--env",
-      "domain:wp.example.test",
-      "--no-compat-check",
-      ...(flag ? ["--temporary-installer"] : []),
-    ]);
-    assert.equal(envelope.ok, true);
-    assert.equal(requests.length, 1);
-    assert.equal(requests[0].kind, "setup-novamira");
-    assert.equal(requests[0].allowTemporaryInstaller, flag ? true : undefined);
-    assert.equal(Object.hasOwn(requests[0], "allowTemporaryInstaller"), flag);
-  }
+test("--temporary-installer reaches a cPanel or WHM setup as its explicit approval, and only when given", async () => {
+  for (const [provider, envId] of [
+    ["cpanel", "domain:wp.example.test"],
+    ["whm", "wptest:wp.example.test"],
+  ])
+    for (const flag of [true, false]) {
+      const requests = [];
+      const client = {
+        ...fakeClient(),
+        provider,
+        async action(request) {
+          requests.push(request);
+          return {
+            provider,
+            action: "novamira.setup",
+            status: 200,
+            raw: {
+              siteUrl: "https://wp.example.test/",
+              version: "1.12.8",
+              aiEnabled: true,
+              warnings: [],
+            },
+          };
+        },
+      };
+      const { envelope } = await harness({ client }).run([
+        "setup",
+        "--env",
+        envId,
+        "--no-compat-check",
+        ...(flag ? ["--temporary-installer"] : []),
+      ]);
+      assert.equal(envelope.ok, true);
+      assert.equal(requests.length, 1);
+      assert.equal(requests[0].kind, "setup-novamira");
+      assert.equal(
+        requests[0].allowTemporaryInstaller,
+        flag ? true : undefined,
+      );
+      assert.equal(Object.hasOwn(requests[0], "allowTemporaryInstaller"), flag);
+    }
 });
 
-test("--temporary-installer is refused for a provider other than cPanel before any provider call", async () => {
+test("--temporary-installer is refused for a provider other than cPanel or WHM before any provider call", async () => {
   const client = fakeClient();
   const { envelope } = await harness({ client }).run([
     "setup",

@@ -134,7 +134,8 @@ export interface PageModel {
 
 /**
  * The setup target, with its profile's provider so the page can offer
- * cPanel's approval. A provider this build does not know is left out.
+ * the cPanel and WHM installer approval. A provider this build does not know
+ * is left out.
  */
 function setupWithProvider(model: PageModel): SetupView | undefined {
   const setup = model.setup;

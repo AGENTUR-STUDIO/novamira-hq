@@ -128,6 +128,11 @@ export interface HttpRequest {
    * cannot produce a second side effect.
    */
   readonly idempotent?: boolean;
+  /**
+   * `"follow"` (default) chases same-origin redirects. `"return"` hands a 3xx
+   * response back unread, for session logins whose cookie rides on the redirect.
+   */
+  readonly redirect?: "follow" | "return";
   readonly retry?: Partial<RetryPolicy>;
   readonly timeoutMs?: number;
   readonly totalTimeoutMs?: number;
@@ -268,6 +273,7 @@ interface AttemptContext {
   readonly headers: Readonly<Record<string, string>>;
   readonly body: PreparedBody;
   readonly acceptStatuses: ReadonlySet<number>;
+  readonly redirect: "follow" | "return";
   readonly secrets: readonly string[];
   readonly attempt: number;
   readonly timeoutMs: number;
@@ -420,6 +426,7 @@ class ProviderHttpClient implements HttpClient {
               : { "content-type": body.contentType, ...headers },
           body,
           acceptStatuses: new Set(request.acceptStatuses ?? []),
+          redirect: request.redirect ?? "follow",
           secrets,
           attempt,
           timeoutMs: Math.min(timeoutMs, remaining),
@@ -576,6 +583,17 @@ class ProviderHttpClient implements HttpClient {
         );
 
         if (REDIRECT_STATUSES.has(response.status)) {
+          if (hop.redirect === "return") {
+            await cancelBody(response);
+            return {
+              status: response.status,
+              headers: response.headers,
+              url: hop.url.toString(),
+              data: null as T,
+              text: "",
+              attempts: hop.attempt,
+            };
+          }
           await cancelBody(response);
           const location = response.headers.get("location");
           if (location === null || redirects >= MAX_REDIRECTS)

@@ -20,7 +20,7 @@ and make your sites available to compatible AI agents through one connection.
 - Connect an MCP-compatible AI client once and use it across your sites.
 
 Novamira HQ currently supports Kinsta, InstaWP, Pantheon, Pressable, WP Engine,
-Rocket.net, Hostinger, Cloudways, Plesk, xCloud, and cPanel. Available operations vary by provider.
+Rocket.net, Hostinger, Cloudways, Plesk, xCloud, cPanel, and WHM. Available operations vary by provider.
 Plesk accounts can list hosted domains. An active WP Toolkit adds WordPress
 installation discovery, Novamira setup, WordPress backup and restore, and
 directional copying between two selected WordPress installations. Plesk copying
@@ -44,6 +44,19 @@ Novamira is already installed, HQ uploads only the temporary installer, no
 ZIP. This needs WordPress permalinks turned on. cPanel has no user-level API
 for restoring backups, clearing caches or changing PHP, so those actions are
 not available. WordPress installed in a subfolder is not listed.
+
+WHM servers connect with the HTTPS WHM address (for example
+`https://server.example.com:2087`) and a root API token. One profile covers
+every cPanel account on the server, and site ids are `<account>:<domain>`. The
+operations, limits and temporary-installer approval are the same as cPanel's.
+HQ uses WP Toolkit for an account only when that account's feature list
+includes it; otherwise it reads the account's files and, after you approve it,
+sets up Novamira with the temporary installer, uploaded through a short-lived
+cPanel session that HQ logs out. That temporary installer path needs
+`https://<WHM host>:2083` reachable from this computer with a valid
+certificate. A root token controls the whole server, so
+create one for HQ and revoke it from WHM » Development » Manage API Tokens.
+Reseller tokens are not supported.
 
 ## How it works
 

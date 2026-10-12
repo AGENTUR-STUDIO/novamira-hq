@@ -1383,7 +1383,7 @@ test("the temporary installer approval is refused for other providers", async ()
     {
       code: "usage_error",
       message:
-        "The temporary installer approval applies only to cPanel accounts without WP Toolkit.",
+        "The temporary installer approval applies only to cPanel accounts without WP Toolkit, directly or through WHM.",
     },
   );
 });

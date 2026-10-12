@@ -236,6 +236,29 @@ test("a fourth redirect is refused rather than followed", async () => {
   }
 });
 
+test("a request with redirect: return gets the 3xx response and its cookies", async () => {
+  const seen = [];
+  const client = createHttpClient({
+    baseUrl: "https://api.example.test",
+    retry: { maxAttempts: 1 },
+    fetch: async (input, init) => {
+      seen.push(String(input));
+      assert.equal(init.redirect, "manual");
+      const headers = new Headers({ location: "/next" });
+      headers.append("set-cookie", "a=1; HttpOnly");
+      headers.append("set-cookie", "b=2; HttpOnly");
+      return new Response(null, { status: 307, headers });
+    },
+  });
+  const response = await client.request({ path: "/login", redirect: "return" });
+  assert.equal(response.status, 307);
+  assert.deepEqual(response.headers.getSetCookie(), [
+    "a=1; HttpOnly",
+    "b=2; HttpOnly",
+  ]);
+  assert.deepEqual(seen, ["https://api.example.test/login"]);
+});
+
 // A URL's pathname cannot be assigned "": http(s) normalizes it back to "/".
 // Stripping the trailing slash through the URL object therefore left every
 // request against a path-less base URL — Pantheon, Rocket.net and Hostinger all

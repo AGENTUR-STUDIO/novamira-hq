@@ -191,7 +191,7 @@ test("5b: the hosting bundle asks for the cPanel temporary installer approval on
   const { hosting } = await bundles();
   assert.ok(
     hosting.content.includes(
-      "cPanel without WP Toolkit needs the user's explicit approval (`--temporary-installer`) before HQ uploads a temporary installer; ask for it only after setup returns `confirmation_required`.",
+      "cPanel, directly or through WHM, without WP Toolkit needs the user's explicit approval (`--temporary-installer`) before HQ uploads a temporary installer; ask for it only after setup returns `confirmation_required`.",
     ),
   );
 });

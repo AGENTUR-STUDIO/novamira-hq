@@ -430,7 +430,7 @@ const TOOL_DEFINITIONS: readonly (McpTool & {})[] = [
   {
     name: "hosting_backup_create",
     description:
-      "Create a backup of one hosting environment. A provider whose backups take minutes (cPanel) only starts it and answers with status 202 and no operation ID; check hosting_backups_list for the new backup.",
+      "Create a backup of one hosting environment. A provider whose backups take minutes, such as cPanel (directly or through WHM), only starts it and answers with status 202 and no operation ID; check hosting_backups_list for the new backup.",
     inputSchema: objectSchema(
       {
         profile: PROFILE_PROPERTY,
@@ -459,7 +459,7 @@ const TOOL_DEFINITIONS: readonly (McpTool & {})[] = [
         allowTemporaryInstaller: {
           type: "boolean",
           description:
-            "cPanel accounts without WP Toolkit only. Set true only after the user explicitly approves uploading Novamira and a temporary installer that removes itself after one run.",
+            "cPanel (directly or through WHM) accounts without WP Toolkit only. Set true only after the user explicitly approves uploading Novamira and a temporary installer that removes itself after one run.",
         },
       },
       ["profile", "environmentId", "enableAiAbilities"],
@@ -1133,7 +1133,8 @@ async function callHostingTool(
               ? {}
               : { tag: requiredString(argumentsValue, "tag") },
           // A tool call never blocks on a provider that waits for the
-          // backup to finish; cPanel then reports it as started.
+          // backup to finish; cPanel, directly or through WHM, then reports it
+          // as started.
           wait: false,
         }),
       );

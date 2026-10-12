@@ -320,6 +320,7 @@ async function fixture(options = {}) {
     NOVAMIRA_HQ_HOME: home,
     KINSTA_API_KEY: "kinsta-fake-not-a-real-secret",
     CPANEL_API_TOKEN: "cpanel-fake-not-a-real-secret",
+    WHM_API_TOKEN: "whm-fake-not-a-real-secret",
   };
   const paths = platformPaths(environment, process.platform, home);
   const security = defaultFileSecurity();
@@ -352,6 +353,9 @@ async function fixture(options = {}) {
       ...(options.cpanelClient === undefined
         ? {}
         : { cpanel: () => options.cpanelClient }),
+      ...(options.whmClient === undefined
+        ? {}
+        : { whm: () => options.whmClient }),
     },
     env: environment,
   });
@@ -1107,12 +1111,12 @@ const PANEL_PROFILES = {
   },
 };
 
-/** A cPanel client double that records the setup request and stops there. */
-function recordingCpanelClient() {
+/** A cPanel or WHM client double that records the setup request and stops there. */
+function recordingCpanelClient(provider = "cpanel") {
   const requests = [];
   return {
     requests,
-    provider: "cpanel",
+    provider,
     async action(request) {
       requests.push(request);
       throw new CliError("provider_error", "recorded");
@@ -1142,6 +1146,52 @@ test("the start route passes the temporary installer approval to a cPanel target
     );
     if (ticked)
       assert.equal(cpanelClient.requests[0].allowTemporaryInstaller, true);
+  }
+});
+
+const WHM_PROFILES = {
+  ...PROFILES,
+  server: {
+    provider: "whm",
+    credential: { type: "env", name: "WHM_API_TOKEN" },
+    apiBaseUrl: "https://whm.example.test:2087/",
+    companyId: "root",
+  },
+};
+
+test("the temporary installer approval is offered for a WHM target as well", async () => {
+  const { server } = await fixture({ hostingProfiles: WHM_PROFILES });
+  const whm = await page(
+    server,
+    "/novamira-setup?profile=server&env=wptest:wp.example.test",
+  );
+  assert.ok(whm.includes('data-bind="setup.allowTemporaryInstaller"'));
+  assert.ok(whm.includes(INSTALLER_LABEL));
+  assert.ok(!/disabled[^>]*allowTemporaryInstaller/.test(whm));
+});
+
+test("the start route passes the temporary installer approval to a WHM target only when ticked", async () => {
+  for (const ticked of [true, false]) {
+    const whmClient = recordingCpanelClient("whm");
+    const { server } = await fixture({
+      setupPollMs: 1,
+      hostingProfiles: WHM_PROFILES,
+      whmClient,
+    });
+    const started = await sse(
+      server,
+      startRequest("profile=server&env=wptest:wp.example.test", {
+        setup: { enableAiAbilities: true, allowTemporaryInstaller: ticked },
+      }),
+    );
+    await drain(server, jobIdFrom(started.recorder));
+    assert.equal(whmClient.requests.length, 1);
+    assert.equal(
+      Object.hasOwn(whmClient.requests[0], "allowTemporaryInstaller"),
+      ticked,
+    );
+    if (ticked)
+      assert.equal(whmClient.requests[0].allowTemporaryInstaller, true);
   }
 });
 

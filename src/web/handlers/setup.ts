@@ -54,6 +54,7 @@ import { parseSetup } from "../signals-input.js";
 import { defaultDashboardSignals } from "../signals.js";
 import type { SseStream } from "../sse.js";
 import { PROVIDER_KINDS } from "../../config/schema.js";
+import { cpanelFamily } from "../../hosting/types.js";
 import {
   renderSetupWork,
   renderSetupWorkBody,
@@ -133,13 +134,15 @@ export function createSetupStartHandler(context: RouteContext): RouteHandler {
             "Approve enabling AI Abilities before starting setup. Nothing has been installed or changed.",
           );
         }
-        // The approval is offered only on a cPanel target's page, so a stale
-        // ticked signal never reaches another provider's setup.
+        // The approval is offered only on the page of a cPanel or WHM target,
+        // so a stale ticked signal never reaches another provider's setup.
+        const target = setup.allowTemporaryInstaller
+          ? (await context.loadConfigView()).profiles.find(
+              (profile) => profile.name === requested.profile,
+            )
+          : undefined;
         const cpanel =
-          setup.allowTemporaryInstaller &&
-          (await context.loadConfigView()).profiles.find(
-            (profile) => profile.name === requested.profile,
-          )?.provider === "cpanel";
+          target?.provider !== undefined && cpanelFamily(target.provider);
         const jobId = await context.setupJobs.start({
           profile: requested.profile,
           envId: requested.envId,

@@ -3,8 +3,6 @@
 
 /** cPanel account adapter over UAPI and WP Toolkit REST. */
 
-import { randomUUID } from "node:crypto";
-import { setTimeout as delay } from "node:timers/promises";
 import { CliError } from "../../errors.js";
 import {
   type ActionRequest,
@@ -12,7 +10,6 @@ import {
   type ProviderClient,
   type ReadRequest,
   unsupportedActionRequest,
-  unsupportedOperation,
   unsupportedReadRequest,
 } from "../client.js";
 import type {
@@ -41,14 +38,16 @@ import {
   domainFromEnvId,
   domainName,
 } from "./cpanel-sites.js";
-import { setupWithInstaller } from "./cpanel-installer-setup.js";
-import { setupWithToolkit } from "./cpanel-toolkit-setup.js";
+import {
+  backupStartedResult,
+  CompletedActions,
+  defaultSleep,
+  dispatchSetup,
+} from "./cpanel-client-support.js";
 import { type CpanelApi, createCpanelApi } from "./cpanel-uapi.js";
 
 const PROVIDER = "cpanel" as const;
 const NOT_AVAILABLE = "Not available through the cPanel user API";
-const BACKUP_STARTED =
-  "cPanel is creating the account backup in the background. It can take several minutes; check hosting_backups_list for the new file.";
 
 export const CPANEL_CAPABILITIES = providerCapabilities([
   ["providers.validate", true],
@@ -92,17 +91,14 @@ class CpanelClient implements ProviderClient {
   readonly #credentialSource: string;
   readonly #sleep: (ms: number, signal?: AbortSignal) => Promise<void>;
   readonly #transferFetch: typeof fetch;
-  readonly #completed = new Map<string, OperationStatus>();
+  readonly #completed = new CompletedActions(PROVIDER);
 
   constructor(
     context: ProviderClientContext,
     options: CpanelClientOptions = {},
   ) {
     this.#api = createCpanelApi(context);
-    this.#sleep =
-      options.sleep ??
-      ((ms, signal) =>
-        delay(ms, undefined, signal === undefined ? undefined : { signal }));
+    this.#sleep = options.sleep ?? defaultSleep;
     this.#transferFetch = context.transferFetch ?? globalThis.fetch;
     this.#configured = context.profile.apiBaseUrl !== undefined;
     this.#credentialSource = context.credentialSource;
@@ -162,23 +158,6 @@ class CpanelClient implements ProviderClient {
     return [cpanelEnvironment(await this.#site(siteId))];
   }
 
-  /** A finished action keeps its status here so HQ can confirm it once. */
-  #completedAction(action: string, raw: unknown): ActionResult {
-    const operationId = randomUUID();
-    const status: OperationStatus = {
-      provider: PROVIDER,
-      operationId,
-      status: 200,
-      done: true,
-      failed: false,
-      raw: { completed: true },
-    };
-    if (this.#completed.size >= 32)
-      this.#completed.delete(this.#completed.keys().next().value ?? "");
-    this.#completed.set(operationId, status);
-    return { provider: PROVIDER, action, status: 200, operationId, raw };
-  }
-
   async read(request: ReadRequest): Promise<unknown> {
     switch (request.kind) {
       case "capabilities":
@@ -207,15 +186,9 @@ class CpanelClient implements ProviderClient {
         await this.#site(domainFromEnvId(request.envId));
         if (request.wait === false) {
           await startAccountBackup(this.#api, signal);
-          return {
-            provider: PROVIDER,
-            action: "backups.create",
-            status: 202,
-            message: BACKUP_STARTED,
-            raw: { started: true, note: BACKUP_STARTED },
-          };
+          return backupStartedResult(PROVIDER);
         }
-        return this.#completedAction("backups.create", {
+        return this.#completed.record("backups.create", {
           backup_id: await createAccountBackup(this.#api, this.#sleep, {
             signal,
           }),
@@ -225,20 +198,12 @@ class CpanelClient implements ProviderClient {
         const { signal } = request;
         signal?.throwIfAborted();
         const site = await this.#site(domainFromEnvId(request.envId), signal);
-        if (site.toolkitId !== undefined)
-          return setupWithToolkit(
-            this.#api,
-            this.#transferFetch,
-            site,
-            request,
-            this.#sleep,
-          );
-        return setupWithInstaller(
+        return dispatchSetup(
           this.#api,
           this.#transferFetch,
           site,
           request,
-          { sleep: this.#sleep, uuid: randomUUID, now: Date.now },
+          this.#sleep,
         );
       }
       default:
@@ -247,12 +212,7 @@ class CpanelClient implements ProviderClient {
   }
 
   operationStatus(operationId: string): Promise<OperationStatus> {
-    const completed = this.#completed.get(operationId);
-    return completed
-      ? Promise.resolve(completed)
-      : Promise.reject(
-          unsupportedOperation(PROVIDER, "unknown operation status"),
-        );
+    return this.#completed.status(operationId);
   }
 
   wpCliResultsObservable(): boolean {

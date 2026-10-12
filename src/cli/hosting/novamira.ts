@@ -86,7 +86,7 @@ export interface NovamiraSetupCommandOptions {
   readonly aiAbilities?: boolean;
   /** `--compat-check`: the site compatibility read after the install. */
   readonly compatCheck?: boolean;
-  /** `--temporary-installer`: cPanel without WP Toolkit only. */
+  /** `--temporary-installer`: cPanel (directly or through WHM) without WP Toolkit only. */
   readonly temporaryInstaller?: boolean;
   readonly intervalSeconds?: number;
   readonly timeoutSeconds?: number;
@@ -280,7 +280,7 @@ export function registerNovamiraCommands(
     .option("--no-compat-check", "skip the site compatibility check")
     .option(
       "--temporary-installer",
-      "cPanel without WP Toolkit: approve uploading Novamira and a temporary installer that removes itself",
+      "cPanel or WHM account without WP Toolkit: approve uploading Novamira and a temporary installer that removes itself",
       false,
     );
 

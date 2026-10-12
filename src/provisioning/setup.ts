@@ -50,6 +50,7 @@ import {
 } from "../hosting/client.js";
 import { waitForOperationStatus } from "../hosting/operations.js";
 import { shellJoin, wpCliCommandPayload } from "../hosting/shell.js";
+import { cpanelFamily } from "../hosting/types.js";
 import { redactAssociatedText } from "../output/redact.js";
 import type { InvocationWarning } from "../output/render.js";
 import {
@@ -133,7 +134,7 @@ export interface NovamiraSetupRequest {
   readonly aiAbilities?: boolean;
   /** Defaults to true. */
   readonly compatCheck?: boolean;
-  /** cPanel without WP Toolkit: explicit approval for the temporary installer. */
+  /** cPanel (directly or through WHM) without WP Toolkit: explicit approval for the temporary installer. */
   readonly temporaryInstaller?: boolean;
   readonly intervalSeconds?: number;
   readonly timeoutSeconds?: number;
@@ -272,16 +273,17 @@ async function provisionNovamiraSteps(
   // Nothing below may issue a provider request until A4 has passed.
 
   const envId = requireEnvId(request.envId);
-  if (request.temporaryInstaller === true && client.provider !== "cpanel")
+  if (request.temporaryInstaller === true && !cpanelFamily(client.provider))
     throw new CliError(
       "usage_error",
-      "The temporary installer approval applies only to cPanel accounts without WP Toolkit.",
+      "The temporary installer approval applies only to cPanel accounts without WP Toolkit, directly or through WHM.",
     );
   if (
     client.provider === "hostinger" ||
     client.provider === "cloudways" ||
     client.provider === "plesk" ||
-    client.provider === "cpanel"
+    client.provider === "cpanel" ||
+    client.provider === "whm"
   )
     return provisionProviderApi(dependencies, request);
 

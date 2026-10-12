@@ -4,6 +4,7 @@
 import { CliError } from "../errors.js";
 import { asRecord } from "../json.js";
 import { HOSTINGER_NOVAMIRA_SOURCE } from "../hosting/providers/hostinger-setup.js";
+import { cpanelFamily } from "../hosting/types.js";
 import { checkSiteCompatibility, metadataUrl } from "./compatibility.js";
 import { connectHandoff } from "./handoff.js";
 import { normalizeSiteUrl } from "./site-url.js";
@@ -22,14 +23,18 @@ export async function provisionProviderApi(
 ): Promise<NovamiraSetupResult> {
   const cloudways = dependencies.client.provider === "cloudways";
   const plesk = dependencies.client.provider === "plesk";
-  const cpanel = dependencies.client.provider === "cpanel";
+  // WHM sets up the same cPanel accounts, so the cPanel rules apply to both.
+  const cpanel = cpanelFamily(dependencies.client.provider);
+  const whm = dependencies.client.provider === "whm";
   const label = cloudways
     ? "Cloudways"
     : plesk
       ? "Plesk"
-      : cpanel
-        ? "cPanel"
-        : "Hostinger";
+      : whm
+        ? "WHM"
+        : cpanel
+          ? "cPanel"
+          : "Hostinger";
   if (
     request.force ||
     request.activate === false ||
@@ -53,9 +58,11 @@ export async function provisionProviderApi(
       ? "Installing and activating Novamira through Cloudways WP Manager. Existing installations are never overwritten. AI Abilities settings cannot be changed through this API; readiness will be checked afterwards."
       : plesk
         ? "Installing Novamira through Plesk WP Toolkit on the selected WordPress installation. Existing installations are never overwritten."
-        : cpanel
-          ? "Installing Novamira through cPanel. Existing installations are never overwritten."
-          : "Preparing Novamira through Hostinger: verified ZIP upload and temporary installer. Existing installations are never overwritten.",
+        : whm
+          ? "Installing Novamira through WHM on the selected cPanel account. Existing installations are never overwritten."
+          : cpanel
+            ? "Installing Novamira through cPanel. Existing installations are never overwritten."
+            : "Preparing Novamira through Hostinger: verified ZIP upload and temporary installer. Existing installations are never overwritten.",
   );
   const action = await dependencies.client.action({
     kind: "setup-novamira",

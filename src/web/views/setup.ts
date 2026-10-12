@@ -58,6 +58,7 @@
 
 import type { ProviderKind } from "../../config/schema.js";
 import type { ErrorCode } from "../../errors.js";
+import { cpanelFamily } from "../../hosting/types.js";
 import type { NovamiraSetupResult } from "../../provisioning/index.js";
 import * as ds from "../datastar.js";
 import {
@@ -251,9 +252,10 @@ const AI_ABILITIES_WARNING =
   "When enabled, AI agents can execute PHP code and perform filesystem operations on this site. Use AI Abilities only on development or staging sites with a current backup.";
 
 /**
- * cPanel accounts without WP Toolkit need a second, separate approval. It
- * never gates Start Setup: with WP Toolkit it is not used, and without it the
- * provider answers `confirmation_required` through the error notice.
+ * cPanel accounts (directly or through WHM) without WP Toolkit need a second,
+ * separate approval. It never gates Start Setup: with WP Toolkit it is not
+ * used, and without it the provider answers `confirmation_required` through the
+ * error notice.
  */
 function renderInstallerApproval(): Html {
   return html`<label class="toggle setup-ai-toggle"><input type="checkbox"${ds.bind(
@@ -279,7 +281,9 @@ function renderActionPanel(view: SetupView): Html {
   return html`<section class="panel action-panel"><p class="field-help">${SETUP_DESCRIPTION}</p><label class="toggle setup-ai-toggle"><input type="checkbox"${ds.bind(
     "setup.enableAiAbilities",
   )}><span>I understand and approve enabling AI Abilities on this site</span></label><p class="field-help">Approval is required to start setup. Without it, nothing will be installed or changed.</p><p class="field-help setup-warning"><strong>Security note:</strong> ${AI_ABILITIES_WARNING}</p>${
-    view.provider === "cpanel" ? renderInstallerApproval() : false
+    view.provider !== undefined && cpanelFamily(view.provider)
+      ? renderInstallerApproval()
+      : false
   }<button class="button primary" type="button" disabled${ds.attrs({ disabled: or(not(signal("setup.enableAiAbilities")), signal("setup.submitting")) })}${ds.indicator("setup.submitting")}${ds.on(
     "click",
     seq(set("setup.submitting", jsBoolean(true)), action),

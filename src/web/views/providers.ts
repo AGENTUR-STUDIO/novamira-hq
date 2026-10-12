@@ -193,6 +193,13 @@ const PROVIDER_FORM_META: JsonValue = {
     credentialHelp:
       "Paste a cPanel API token. Create one in cPanel → Security → Manage API Tokens. A token without restrictions can manage the whole account; create one only for Novamira HQ so you can revoke it there.",
   },
+  whm: {
+    companyLabel: "WHM user",
+    companyPlaceholder: "root",
+    companyHelp: "Novamira HQ connects as root. Leave blank to use root.",
+    credentialHelp:
+      "Paste a WHM API token created as root in WHM → Development → Manage API Tokens. A root token controls the whole server; create one only for Novamira HQ so you can revoke it there.",
+  },
 };
 
 /** What the four fields say for a provider the table does not describe. */
@@ -219,6 +226,11 @@ const PANEL_URL_META: JsonValue = {
     panelUrlPlaceholder: "https://server.example.com:2083",
     panelUrlHelp:
       "Use the address you sign in to cPanel with, such as https://server.example.com:2083 or https://cpanel.example.com.",
+  },
+  whm: {
+    panelUrlPlaceholder: "https://server.example.com:2087",
+    panelUrlHelp:
+      "Use the address you sign in to WHM with, such as https://server.example.com:2087.",
   },
 };
 
@@ -513,7 +525,7 @@ export function renderProviderForm(open: boolean): Html {
     placeholder: meta("companyPlaceholder"),
   })}><small class="field-help"${ds.text(
     meta("companyHelp"),
-  )}></small></label><label${ds.classes({ hidden: not(or(equal(signal("providerForm.provider"), jsString("plesk")), equal(signal("providerForm.provider"), jsString("cpanel")))) })}><span>Panel URL</span><input type="url"${ds.bind("providerForm.apiBaseUrl")}${ds.attrs({ placeholder: panelUrlMeta("panelUrlPlaceholder") })}><small class="field-help"${ds.text(panelUrlMeta("panelUrlHelp"))}></small></label></div><div class="button-row"><button class="button primary" type="submit"${ds.attrs({ disabled: signal(saving) })}><span${ds.classes({ hidden: signal(saving) })}>Save and connect</span><span class="loading-inline ds-toggle"${ds.classes({ open: signal(saving) })}>Connecting…</span></button><button class="button secondary" type="button"${ds.on(
+  )}></small></label><label${ds.classes({ hidden: not(or(equal(signal("providerForm.provider"), jsString("plesk")), equal(signal("providerForm.provider"), jsString("cpanel")), equal(signal("providerForm.provider"), jsString("whm")))) })}><span>Panel URL</span><input type="url"${ds.bind("providerForm.apiBaseUrl")}${ds.attrs({ placeholder: panelUrlMeta("panelUrlPlaceholder") })}><small class="field-help"${ds.text(panelUrlMeta("panelUrlHelp"))}></small></label></div><div class="button-row"><button class="button primary" type="submit"${ds.attrs({ disabled: signal(saving) })}><span${ds.classes({ hidden: signal(saving) })}>Save and connect</span><span class="loading-inline ds-toggle"${ds.classes({ open: signal(saving) })}>Connecting…</span></button><button class="button secondary" type="button"${ds.on(
     "click",
     resetProviderForm(false),
   )}>Cancel</button></div></section></form>`;

@@ -135,7 +135,7 @@ export interface UpdateSignals {
  */
 export interface SetupSignals {
   readonly enableAiAbilities: boolean;
-  /** cPanel without WP Toolkit: approval for the temporary installer. */
+  /** cPanel (directly or through WHM) without WP Toolkit: approval for the temporary installer. */
   readonly allowTemporaryInstaller: boolean;
   /** Immediate local feedback while the setup-start request is in flight. */
   readonly submitting: boolean;

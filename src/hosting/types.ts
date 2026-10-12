@@ -192,10 +192,16 @@ export const PROVIDER_LABELS: Readonly<Record<ProviderKind, string>> = {
   plesk: "Plesk",
   xcloud: "xCloud",
   cpanel: "cPanel",
+  whm: "WHM",
 };
 
 export function providerLabel(provider: ProviderKind): string {
   return PROVIDER_LABELS[provider];
+}
+
+/** The providers that manage WordPress through cPanel accounts and their UAPI. */
+export function cpanelFamily(provider: string): boolean {
+  return provider === "cpanel" || provider === "whm";
 }
 
 /* -------------------------------------------------------------------------- */
@@ -249,6 +255,7 @@ export const NOVAMIRA_SETUP_PROVIDERS: ReadonlySet<ProviderKind> =
       "cloudways",
       "plesk",
       "cpanel",
+      "whm",
     ]),
   );
 
@@ -261,6 +268,7 @@ export const NOVAMIRA_SETUP_PROVIDER_LABELS: readonly string[] = Object.freeze([
   "Cloudways",
   "Plesk",
   "cPanel",
+  "WHM",
 ]);
 
 /** A JSON object as emitted to stdout or an HTTP response body. */
