@@ -204,12 +204,19 @@ export function createProviderService(
         // — is preserved by the `existing.apiBaseUrl` fallback.
         const apiBaseUrl =
           input.apiBaseUrl !== "" ? input.apiBaseUrl : existing?.apiBaseUrl;
-        if (provider === "plesk" && !apiBaseUrl)
+        const companyId = input.companyId !== "" ? input.companyId : undefined;
+        if ((provider === "plesk" || provider === "cpanel") && !apiBaseUrl)
           throw new CliError(
             "usage_error",
-            "Enter the HTTPS Plesk panel URL before connecting.",
+            provider === "plesk"
+              ? "Enter the HTTPS Plesk panel URL before connecting."
+              : "Enter the HTTPS cPanel address before connecting.",
           );
-        const companyId = input.companyId !== "" ? input.companyId : undefined;
+        if (provider === "cpanel" && companyId === undefined)
+          throw new CliError(
+            "usage_error",
+            "Enter the cPanel username before connecting.",
+          );
 
         const profile: HostingProfile = {
           provider,

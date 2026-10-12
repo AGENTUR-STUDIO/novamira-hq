@@ -280,3 +280,129 @@ test("a base URL with no path does not double the leading slash", async () => {
     await server.close();
   }
 });
+
+test("multipart bodies carry fields and files and let fetch set the boundary", async () => {
+  let seen;
+  const client = createHttpClient({
+    baseUrl: "https://api.example.test",
+    retry: { maxAttempts: 1 },
+    fetch: async (input, init) => {
+      seen = {
+        type: new Headers(init.headers).get("content-type"),
+        body: init.body,
+      };
+      return new Response("{}", {
+        headers: { "content-type": "application/json" },
+      });
+    },
+  });
+  await client.json({
+    path: "/upload",
+    method: "POST",
+    body: {
+      kind: "multipart",
+      fields: { dir: "public_html/wp-content" },
+      files: [
+        {
+          field: "file-1",
+          filename: "a.zip",
+          contentType: "application/zip",
+          bytes: new Uint8Array([80, 75, 3, 4]),
+        },
+      ],
+    },
+  });
+  assert.ok(seen.body instanceof FormData);
+  assert.equal(seen.body.get("dir"), "public_html/wp-content");
+  const file = seen.body.get("file-1");
+  assert.equal(file.name, "a.zip");
+  assert.equal(file.type, "application/zip");
+  assert.deepEqual(
+    new Uint8Array(await file.arrayBuffer()),
+    new Uint8Array([80, 75, 3, 4]),
+  );
+  assert.equal(seen.type, null);
+});
+
+test("a retried idempotent multipart POST resends the complete form on every attempt", async () => {
+  const bytes = new Uint8Array([80, 75, 3, 4, 9, 9]);
+  const received = [];
+  const server = await startServer((request, response) => {
+    const chunks = [];
+    request.on("data", (chunk) => chunks.push(chunk));
+    request.on("end", () => {
+      const text = Buffer.concat(chunks).toString("latin1");
+      received.push({ contentType: request.headers["content-type"], text });
+      if (received.length === 1) {
+        response.writeHead(503, { "retry-after": "0" });
+        response.end("{}");
+        return;
+      }
+      response.writeHead(200, { "content-type": "application/json" });
+      response.end("{}");
+    });
+  });
+  try {
+    const client = createHttpClient({
+      baseUrl: server.baseUrl,
+      retry: { maxAttempts: 2, initialDelayMs: 1 },
+    });
+    await client.json({
+      path: "/upload",
+      method: "POST",
+      idempotent: true,
+      body: {
+        kind: "multipart",
+        fields: { dir: "public_html/wp-content" },
+        files: [
+          {
+            field: "file-1",
+            filename: "a.zip",
+            contentType: "application/zip",
+            bytes,
+          },
+        ],
+      },
+    });
+    assert.equal(received.length, 2);
+    for (const attempt of received) {
+      assert.match(attempt.contentType, /^multipart\/form-data; boundary=/);
+      assert.match(attempt.text, /name="dir"\r\n\r\npublic_html\/wp-content/);
+      assert.match(attempt.text, /name="file-1"; filename="a\.zip"/);
+      assert.ok(attempt.text.includes("PK\x03\x04\x09\x09"));
+    }
+  } finally {
+    await server.close();
+  }
+});
+
+test("multipart file bytes are not walked as sensitive body values", async () => {
+  const bytes = new Uint8Array(8 * 1024 * 1024);
+  const started = Date.now();
+  const client = createHttpClient({
+    baseUrl: "https://api.example.test",
+    retry: { maxAttempts: 1 },
+    fetch: async () =>
+      new Response("{}", { headers: { "content-type": "application/json" } }),
+  });
+  await client.json({
+    path: "/upload",
+    method: "POST",
+    body: {
+      kind: "multipart",
+      fields: { dir: "public_html" },
+      files: [
+        {
+          field: "file-1",
+          filename: "big.zip",
+          contentType: "application/zip",
+          bytes,
+        },
+      ],
+    },
+  });
+  assert.ok(
+    Date.now() - started < 1000,
+    "body secret scan must not enumerate file bytes",
+  );
+});

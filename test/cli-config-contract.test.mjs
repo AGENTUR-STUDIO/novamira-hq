@@ -525,6 +525,7 @@ test("config add rejects an unknown provider with usage_error and the allowed se
       "cloudways",
       "plesk",
       "xcloud",
+      "cpanel",
     ]);
     assert.equal(cli.hosting.entries.length, 0);
   });

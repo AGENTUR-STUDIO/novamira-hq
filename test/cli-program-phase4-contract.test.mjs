@@ -278,6 +278,7 @@ const COMMAND_SURFACE = {
     "--no-ai-abilities",
     "--compat-check",
     "--no-compat-check",
+    "--temporary-installer",
     "--interval-seconds",
     "--timeout-seconds",
   ],

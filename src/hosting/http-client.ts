@@ -38,6 +38,16 @@ export type HttpBody =
       readonly kind: "text";
       readonly value: string;
       readonly contentType: string;
+    }
+  | {
+      readonly kind: "multipart";
+      readonly fields: Readonly<Record<string, string>>;
+      readonly files: readonly {
+        readonly field: string;
+        readonly filename: string;
+        readonly contentType: string;
+        readonly bytes: Uint8Array;
+      }[];
     };
 
 export interface HttpAuthorization {
@@ -248,7 +258,7 @@ export function createHttpClient(options: HttpClientOptions): HttpClient {
 }
 
 interface PreparedBody {
-  readonly payload: string | undefined;
+  readonly payload: string | FormData | undefined;
   readonly contentType: string | undefined;
 }
 
@@ -387,7 +397,7 @@ class ProviderHttpClient implements HttpClient {
       ...(request.secrets ?? []),
       ...collectSensitiveValues(request.headers),
       ...collectSensitiveValues(request.query),
-      ...collectSensitiveValues(request.body),
+      ...collectSensitiveValues(secretScanView(request.body)),
     ].filter((secret) => secret !== "");
     const headers = lowerCaseHeaders({
       ...this.defaultHeaders,
@@ -914,6 +924,22 @@ function parseRetryAfterMs(header: string | null): number | undefined {
   return Math.max(0, timestamp - Date.now());
 }
 
+/**
+ * The part of a body whose literals may be secrets. File bytes are binary
+ * payloads, not credentials, and walking them value by value would be slow.
+ */
+function secretScanView(body: HttpBody | undefined): unknown {
+  if (body?.kind !== "multipart") return body;
+  return {
+    fields: body.fields,
+    files: body.files.map((file) => ({
+      field: file.field,
+      filename: file.filename,
+      contentType: file.contentType,
+    })),
+  };
+}
+
 function prepareBody(body: HttpBody | undefined): PreparedBody {
   if (body === undefined) return { payload: undefined, contentType: undefined };
   switch (body.kind) {
@@ -937,6 +963,19 @@ function prepareBody(body: HttpBody | undefined): PreparedBody {
       };
     case "text":
       return { payload: body.value, contentType: body.contentType };
+    case "multipart": {
+      // fetch sets the boundary; the Content-Type header is left unset here.
+      const form = new FormData();
+      for (const [name, value] of Object.entries(body.fields))
+        form.append(name, value);
+      for (const file of body.files)
+        form.append(
+          file.field,
+          new Blob([new Uint8Array(file.bytes)], { type: file.contentType }),
+          file.filename,
+        );
+      return { payload: form, contentType: undefined };
+    }
     default: {
       const exhaustive: never = body;
       return exhaustive;

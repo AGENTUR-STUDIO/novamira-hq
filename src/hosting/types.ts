@@ -191,6 +191,7 @@ export const PROVIDER_LABELS: Readonly<Record<ProviderKind, string>> = {
   cloudways: "Cloudways",
   plesk: "Plesk",
   xcloud: "xCloud",
+  cpanel: "cPanel",
 };
 
 export function providerLabel(provider: ProviderKind): string {
@@ -247,6 +248,7 @@ export const NOVAMIRA_SETUP_PROVIDERS: ReadonlySet<ProviderKind> =
       "hostinger",
       "cloudways",
       "plesk",
+      "cpanel",
     ]),
   );
 
@@ -258,6 +260,7 @@ export const NOVAMIRA_SETUP_PROVIDER_LABELS: readonly string[] = Object.freeze([
   "Hostinger",
   "Cloudways",
   "Plesk",
+  "cPanel",
 ]);
 
 /** A JSON object as emitted to stdout or an HTTP response body. */

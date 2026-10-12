@@ -20,6 +20,7 @@
 import type { ProviderKind } from "../../config/schema.js";
 import type { ProviderClientFactory } from "../factory.js";
 import { createCloudwaysClient } from "./cloudways.js";
+import { createCpanelClient } from "./cpanel.js";
 import { createHostingerClient } from "./hostinger.js";
 import { createInstaWpClient } from "./instawp.js";
 import { createKinstaClient } from "./kinsta.js";
@@ -47,10 +48,12 @@ export const PROVIDER_REGISTRY: Readonly<
   cloudways: createCloudwaysClient,
   plesk: createPleskClient,
   xcloud: createXCloudClient,
+  cpanel: createCpanelClient,
 };
 
 export {
   createCloudwaysClient,
+  createCpanelClient,
   createHostingerClient,
   createInstaWpClient,
   createKinstaClient,

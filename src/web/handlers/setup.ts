@@ -133,10 +133,18 @@ export function createSetupStartHandler(context: RouteContext): RouteHandler {
             "Approve enabling AI Abilities before starting setup. Nothing has been installed or changed.",
           );
         }
+        // The approval is offered only on a cPanel target's page, so a stale
+        // ticked signal never reaches another provider's setup.
+        const cpanel =
+          setup.allowTemporaryInstaller &&
+          (await context.loadConfigView()).profiles.find(
+            (profile) => profile.name === requested.profile,
+          )?.provider === "cpanel";
         const jobId = await context.setupJobs.start({
           profile: requested.profile,
           envId: requested.envId,
           aiAbilities: setup.enableAiAbilities,
+          ...(cpanel ? { temporaryInstaller: true } : {}),
         });
         const job = context.setupJobs.snapshot(jobId);
         if (job === undefined) {

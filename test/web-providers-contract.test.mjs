@@ -24,6 +24,7 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
+import { runInNewContext } from "node:vm";
 
 import { defaultFileSecurity } from "../dist/config/file-security.js";
 import { atomicWriteFile } from "../dist/config/atomic-write.js";
@@ -367,7 +368,9 @@ test("2: the form chooses a provider before requesting account details", async (
     "Kinsta company ID",
     "Paste the Rocket.net password.",
     "Paste a Cloudways Access Token. Find it under Profile → API Integration → Create Access Token.",
-    "Plesk panel URL",
+    "cPanel username",
+    "Security → Manage API Tokens",
+    "Panel URL",
     'data-bind="providerForm.apiBaseUrl"',
     "Without it, Novamira HQ lists hosted domains.",
     ">Cancel</button>",
@@ -390,10 +393,62 @@ test("2: the form chooses a provider before requesting account details", async (
     assert.ok(!markup.includes(gone), gone);
 });
 
+/** The browser's attribute decoding, enough for the entities the renderer emits. */
+function decodeAttribute(value) {
+  return value
+    .replaceAll("&quot;", '"')
+    .replaceAll("&#39;", "'")
+    .replaceAll("&lt;", "<")
+    .replaceAll("&gt;", ">")
+    .replaceAll("&amp;", "&");
+}
+
+test("2a: the panel URL placeholder and help follow the selected provider", async () => {
+  const { server } = await fixture({ config: PROFILE_CONFIG });
+  const markup = await page(server, "/hosting-accounts");
+  // Evaluate the field's own Datastar expressions the way the browser does:
+  // the lookup table travels in the attribute, indexed by the provider signal.
+  const attribute = (pattern) => {
+    const found = pattern.exec(markup);
+    assert.ok(found, String(pattern));
+    return decodeAttribute(found[1]);
+  };
+  const placeholder = attribute(
+    /data-attr="(\{placeholder: [^"]*panelUrlPlaceholder[^"]*\})"/,
+  );
+  const help = attribute(/data-text="([^"]*panelUrlHelp[^"]*)"/);
+  const readPlaceholder = (provider) =>
+    runInNewContext(`(${placeholder})`, { $providerForm: { provider } })
+      .placeholder;
+  const readHelp = (provider) =>
+    runInNewContext(help, { $providerForm: { provider } });
+
+  assert.equal(readPlaceholder("plesk"), "https://panel.example.com:8443");
+  assert.equal(readPlaceholder("cpanel"), "https://server.example.com:2083");
+  assert.equal(
+    readHelp("plesk"),
+    "Enter the HTTPS panel URL. With WP Toolkit, Novamira HQ can set up Novamira and create or restore WordPress backups. Without it, Novamira HQ lists hosted domains.",
+  );
+  assert.equal(
+    readHelp("cpanel"),
+    "Use the address you sign in to cPanel with, such as https://server.example.com:2083 or https://cpanel.example.com.",
+  );
+  // Neither provider's wording leaks into the other's help.
+  assert.ok(!readHelp("cpanel").includes("WP Toolkit"));
+  assert.ok(!readHelp("plesk").includes("cPanel"));
+  // The field is hidden for every other provider; the fallback stays neutral.
+  assert.ok(!readPlaceholder("kinsta").includes("8443"));
+  assert.ok(!readHelp("kinsta").includes("WP Toolkit"));
+  // The input carries no handwritten Plesk placeholder or help any more.
+  assert.ok(!markup.includes('placeholder="https://panel.example.com:8443"'));
+  assert.ok(!markup.includes(">Enter the HTTPS panel URL."));
+});
+
 test("2b: provider choices can be shuffled without favoring the catalog order", () => {
   const shuffled = shuffledProviderKinds(() => 0);
   assert.deepEqual([...shuffled].sort(), [
     "cloudways",
+    "cpanel",
     "hostinger",
     "instawp",
     "kinsta",
@@ -668,6 +723,46 @@ test("an invalid account name reports its field and permits a corrected retry", 
     (await store.listHostingProfiles()).map(({ name }) => name),
     ["Città"],
   );
+});
+
+test("cPanel needs a panel address and a username before anything is saved", async () => {
+  const { server, store } = await fixture();
+  const form = {
+    profile: "shared",
+    provider: "cpanel",
+    credentialValue: SECRET,
+    credentialEnv: "",
+    companyId: "",
+    apiBaseUrl: "",
+    force: false,
+  };
+  const noUrl = await save(server, { ...form, companyId: "wptest" });
+  assert.match(
+    noUrl.recorder.find("provider-flash").markup,
+    /Enter the HTTPS cPanel address before connecting/,
+  );
+  const noUser = await save(server, {
+    ...form,
+    apiBaseUrl: "https://server.example.test:2083",
+  });
+  assert.match(
+    noUser.recorder.find("provider-flash").markup,
+    /Enter the cPanel username before connecting/,
+  );
+  for (const { recorder } of [noUrl, noUser])
+    assert.ok(!recorder.body.includes(SECRET));
+  assert.deepEqual(await store.listHostingProfiles(), []);
+
+  const saved = await save(server, {
+    ...form,
+    companyId: "wptest",
+    apiBaseUrl: "https://server.example.test:2083",
+  });
+  assert.ok(!saved.recorder.body.includes(SECRET));
+  const profile = (await store.load()).hostingProfiles.shared;
+  assert.equal(profile.provider, "cpanel");
+  assert.equal(profile.companyId, "wptest");
+  assert.equal(profile.apiBaseUrl, "https://server.example.test:2083");
 });
 
 test("saving checks the connection immediately and reports an unverified saved account honestly", async () => {

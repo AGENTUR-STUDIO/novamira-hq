@@ -64,6 +64,39 @@ test("inspection support is explicit across all eight providers", () => {
     );
 });
 
+test("cPanel offers its error log and account backups, and no cache or activity", async () => {
+  assert.deepEqual(
+    hostingInspectionOptions("cpanel").map((option) => [
+      option.id,
+      option.capability,
+      option.section,
+    ]),
+    [
+      ["logs:error", "logs.get", "Logs"],
+      ["backups", "backups.list", "Backups"],
+    ],
+  );
+  const { client, calls } = fixture("cpanel");
+  const logs = await inspectHosting(client, {
+    ...target,
+    option: "logs:error",
+    limit: 20,
+  });
+  assert.deepEqual(calls.at(-1), {
+    kind: "logs",
+    envId: "env-1",
+    fileName: "error",
+    lines: 20,
+  });
+  assert.equal(logs.note, "Latest entries of the domain's error log.");
+  await inspectHosting(client, { ...target, option: "backups" });
+  assert.deepEqual(calls.at(-1), { kind: "backups", envId: "env-1" });
+  await assert.rejects(
+    inspectHosting(client, { ...target, option: "logs:access" }),
+    { code: "provider_unsupported" },
+  );
+});
+
 test("typed cache scopes dispatch no arbitrary native body and do not claim completion", async () => {
   for (const provider of [
     "kinsta",

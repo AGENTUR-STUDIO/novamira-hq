@@ -133,6 +133,8 @@ export interface NovamiraSetupRequest {
   readonly aiAbilities?: boolean;
   /** Defaults to true. */
   readonly compatCheck?: boolean;
+  /** cPanel without WP Toolkit: explicit approval for the temporary installer. */
+  readonly temporaryInstaller?: boolean;
   readonly intervalSeconds?: number;
   readonly timeoutSeconds?: number;
 }
@@ -270,10 +272,16 @@ async function provisionNovamiraSteps(
   // Nothing below may issue a provider request until A4 has passed.
 
   const envId = requireEnvId(request.envId);
+  if (request.temporaryInstaller === true && client.provider !== "cpanel")
+    throw new CliError(
+      "usage_error",
+      "The temporary installer approval applies only to cPanel accounts without WP Toolkit.",
+    );
   if (
     client.provider === "hostinger" ||
     client.provider === "cloudways" ||
-    client.provider === "plesk"
+    client.provider === "plesk" ||
+    client.provider === "cpanel"
   )
     return provisionProviderApi(dependencies, request);
 

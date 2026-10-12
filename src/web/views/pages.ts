@@ -75,6 +75,7 @@ import {
   renderSiteConnectSuccess,
   type SiteConnectSuccessView,
 } from "./site-profiles.js";
+import { isProviderKind } from "../../config/schema.js";
 import type { ConfigView, DashboardNotice, DashboardPage } from "./types.js";
 
 export interface PageModel {
@@ -129,6 +130,19 @@ export interface PageModel {
    * `/novamira-setup` with no query means.
    */
   readonly setup?: SetupView;
+}
+
+/**
+ * The setup target, with its profile's provider so the page can offer
+ * cPanel's approval. A provider this build does not know is left out.
+ */
+function setupWithProvider(model: PageModel): SetupView | undefined {
+  const setup = model.setup;
+  if (setup === undefined) return undefined;
+  const provider = model.view.profiles.find(
+    (profile) => profile.name === setup.profile,
+  )?.provider;
+  return isProviderKind(provider) ? { ...setup, provider } : setup;
 }
 
 /** Go's `renderMainWithSignals` switch, made exhaustive. */
@@ -192,7 +206,7 @@ export function renderPageBody(page: DashboardPage, model: PageModel): Html {
     case "push-new":
       return renderPushNewPage(model.pushNew, model.view, model.pushes);
     case "novamira-setup":
-      return renderSetupPage(model.setup);
+      return renderSetupPage(setupWithProvider(model));
     case "diagnostics":
       return renderDiagnosticsPage();
     case "settings":

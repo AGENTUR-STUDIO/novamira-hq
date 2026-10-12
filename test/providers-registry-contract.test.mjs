@@ -65,12 +65,12 @@ async function isolatedStore() {
 test("the registry covers every provider kind exactly once", () => {
   const keys = Object.keys(PROVIDER_REGISTRY);
   assert.deepEqual([...keys].sort(), [...PROVIDER_KINDS].sort());
-  assert.equal(keys.length, 10);
+  assert.equal(keys.length, 11);
   assert.equal(new Set(keys).size, keys.length);
 
   // Distinct constructors: a copy-paste in the map would alias two providers.
   const factories = Object.values(PROVIDER_REGISTRY);
-  assert.equal(new Set(factories).size, 10);
+  assert.equal(new Set(factories).size, 11);
   for (const kind of PROVIDER_KINDS) {
     assert.equal(
       typeof PROVIDER_REGISTRY[kind],
@@ -80,7 +80,7 @@ test("the registry covers every provider kind exactly once", () => {
   }
 });
 
-test("registeredProviders reports all ten in taxonomy order", () => {
+test("registeredProviders reports all eleven in taxonomy order", () => {
   assert.deepEqual(registeredProviders(PROVIDER_REGISTRY), [...PROVIDER_KINDS]);
 });
 
@@ -312,6 +312,7 @@ test("NOVAMIRA_SETUP_PROVIDERS supports observable WP-CLI or bounded provider AP
       kind === "hostinger" ||
       kind === "cloudways" ||
       kind === "plesk" ||
+      kind === "cpanel" ||
       (supported && wpCliResultsObservable(client));
     assert.equal(
       NOVAMIRA_SETUP_PROVIDERS.has(kind),
@@ -321,6 +322,7 @@ test("NOVAMIRA_SETUP_PROVIDERS supports observable WP-CLI or bounded provider AP
   }
   assert.deepEqual([...NOVAMIRA_SETUP_PROVIDERS].sort(), [
     "cloudways",
+    "cpanel",
     "hostinger",
     "instawp",
     "kinsta",

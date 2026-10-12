@@ -17,6 +17,15 @@
   in a fixed folder, adds it to the Start menu and to Installed apps, and
   updates replace the app in the same place, so AI clients you configured keep
   working. Uninstalling keeps your settings and credentials.
+- cPanel hosting accounts can now be connected with the HTTPS cPanel address
+  (panel URL), the cPanel username and an API token. HQ lists WordPress at the
+  root of each domain, creates and lists whole-account backups (they count
+  against the account's disk quota), shows the domain error log, and sets up
+  Novamira: through WP Toolkit when the account has it, otherwise, after your
+  approval, through a temporary installer that removes itself after one run;
+  when Novamira is already installed, HQ uploads only that installer, no ZIP.
+  Restoring backups, clearing caches and changing PHP are not available
+  through cPanel's user API.
 
 ### Fixed
 
