@@ -50,7 +50,11 @@ mounted=yes
 # Finder writes .DS_Store in the image, not inside the signed application.
 osascript "$root/scripts/macos/dmg-layout.applescript" "$work/mount"
 sync
-retry hdiutil detach -quiet "$work/mount"
+# Finder or Spotlight can keep the image busy after the layout has been
+# written and synced. A forced detach is then the last resort; the converted
+# image is verified, signed and notarized afterwards.
+retry hdiutil detach -quiet "$work/mount" ||
+  { sync; hdiutil detach -quiet -force "$work/mount"; }
 mounted=
 retry convert_image
 retry hdiutil verify "$output"

@@ -76,5 +76,9 @@ test("Apple ticket checks and hdiutil steps are retried before a release fails",
   ])
     assert.ok(dmg.includes(step), step);
   assert.match(dmg, /create_image\(\) \{\n  rm -f "\$work\/writable\.dmg"/);
+  assert.match(
+    dmg,
+    /\|\|\n  \{ sync; hdiutil detach -quiet -force "\$work\/mount"; \}/,
+  );
   assert.match(dmg, /convert_image\(\) \{\n  rm -f "\$output"/);
 });
