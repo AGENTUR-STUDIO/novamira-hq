@@ -426,7 +426,7 @@ test("WHM setup on an unknown site, an account gone, or a bad id changes nothing
   await assert.rejects(setup(gone.client), {
     code: "not_found",
     message:
-      "The cPanel account wptest is suspended or no longer exists on this server.",
+      "The cPanel account wptest is suspended, no longer exists on this server, or is not managed by this WHM user.",
   });
   assert.equal(state.uploads, 0);
   assert.equal(state.options.size, 0);
@@ -445,7 +445,7 @@ test("an account removed after the listing fails setup with the account message"
   await assert.rejects(setup(client), {
     code: "not_found",
     message:
-      "The cPanel account wptest is suspended or no longer exists on this server.",
+      "The cPanel account wptest is suspended, no longer exists on this server, or is not managed by this WHM user.",
   });
   assert.deepEqual(state.log, []);
 });
@@ -643,6 +643,8 @@ function bareWhm(options = {}) {
     [`GET ${base}/json-api/create_user_session`]: (url) => {
       assert.equal(url.searchParams.get("user"), "wptest");
       assert.equal(url.searchParams.get("service"), "cpaneld");
+      if (options.sessionRefusal !== undefined)
+        return whmFail("create_user_session", options.sessionRefusal);
       return whmOk(
         "create_user_session",
         options.sessionData ?? {
@@ -916,6 +918,28 @@ test("a session URL WHM returns in another shape stops setup before any login or
     assert.deepEqual(generatedFiles(account), [], label);
     assertNoSessionSecrets(diagnostics, label);
   }
+});
+
+test("a WHM user without the create-user-session privilege is told which privilege to ask for", async () => {
+  const account = bareWhm({
+    sessionRefusal:
+      "Permission denied: You do not have the required privileges to run “create_user_session”.",
+  });
+  const { client, calls } = bareClient(account);
+  await assert.rejects(setup(client, { allowTemporaryInstaller: true }), {
+    code: "provider_error",
+    message:
+      "This WHM user cannot open cPanel sessions, which the temporary installer needs. Ask the server owner to give it the create-user-session privilege (WHM » Edit Reseller Nameservers and Privileges). Nothing was uploaded.",
+  });
+  assert.equal(account.session.logins, 0);
+  assert.equal(uploadsOf(calls).length, 0);
+  assert.deepEqual(generatedFiles(account), []);
+  // Any other refusal keeps WHM's own reason.
+  const other = bareWhm({ sessionRefusal: "Session service is down" });
+  await assert.rejects(
+    setup(bareClient(other).client, { allowTemporaryInstaller: true }),
+    { code: "provider_error", message: /Session service is down/ },
+  );
 });
 
 test("a login that does not answer a redirect with the cpsession cookie stops setup before any upload, and cleanup still runs", async () => {

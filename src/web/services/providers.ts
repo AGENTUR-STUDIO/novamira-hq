@@ -210,7 +210,7 @@ export function createProviderService(
         // — is preserved by the `existing.apiBaseUrl` fallback.
         const apiBaseUrl =
           input.apiBaseUrl !== "" ? input.apiBaseUrl : existing?.apiBaseUrl;
-        // WHM only connects as root, so an empty user means root.
+        // An empty WHM user means root; a reseller enters its own user name.
         const companyId =
           input.companyId !== ""
             ? input.companyId
@@ -249,8 +249,8 @@ export function createProviderService(
         const previousStoredId = storedIdOf(existing?.credential);
         const nextStoredId = storedIdOf(credential);
 
-        // A WHM root token is the whole server: it is checked before it is
-        // saved, so a reseller, mistyped or revoked token is never stored.
+        // A WHM token reaches every account it may list: it is checked before
+        // it is saved, so a mistyped or revoked token is never stored.
         // Other providers keep save-then-verify in the handler.
         const validateFirst = provider === "whm";
         const saveConfig = async (): Promise<void> => {

@@ -19,7 +19,6 @@ import {
 import {
   BASE,
   CPANEL,
-  ROOT_PRIVS,
   TOKEN,
   whmFail,
   whmFixture,
@@ -27,11 +26,10 @@ import {
 } from "./helpers/whm-fixture.mjs";
 
 const VALID = {
-  [`GET ${BASE}/json-api/myprivs`]: () => ROOT_PRIVS,
   [`GET ${BASE}/json-api/listaccts`]: () => whmOk("listaccts", { acct: [] }),
 };
 
-test("WHM validates a root token with myprivs then listaccts, sending only the whm header", async () => {
+test("WHM validates a root token with listaccts alone, sending only the whm header", async () => {
   const { client, calls } = whmFixture(VALID);
   assert.deepEqual(await client.validate(), {
     provider: "whm",
@@ -41,7 +39,7 @@ test("WHM validates a root token with myprivs then listaccts, sending only the w
   });
   assert.deepEqual(
     calls.map((c) => c.url.pathname),
-    ["/json-api/myprivs", "/json-api/listaccts"],
+    ["/json-api/listaccts"],
   );
   for (const call of calls) {
     assert.equal(call.authorization, `whm root:${TOKEN}`);
@@ -49,7 +47,7 @@ test("WHM validates a root token with myprivs then listaccts, sending only the w
     assert.ok(!call.url.href.includes(TOKEN));
     assert.equal(call.cookie, null);
   }
-  assert.equal(calls[1].url.searchParams.get("want"), "user");
+  assert.equal(calls[0].url.searchParams.get("want"), "user");
 });
 
 test("WHM treats a missing user as root", async () => {
@@ -58,34 +56,54 @@ test("WHM treats a missing user as root", async () => {
   assert.equal(calls[0].authorization, `whm root:${TOKEN}`);
 });
 
-test("WHM refuses a token without root privileges and never lists accounts", async () => {
-  const { client, calls } = whmFixture({
-    ...VALID,
-    [`GET ${BASE}/json-api/myprivs`]: () =>
-      whmOk("myprivs", { privileges: [{ "list-accts": 1 }] }),
+test("WHM validates a reseller token as that reseller", async () => {
+  const { client, calls } = whmFixture(VALID, { user: "wpres" });
+  assert.deepEqual(await client.validate(), {
+    provider: "whm",
+    status: "active",
+    companyId: "wpres",
+    credential: "env:WHM_API_TOKEN",
   });
+  assert.deepEqual(
+    calls.map((c) => [c.url.pathname, c.authorization]),
+    [["/json-api/listaccts", `whm wpres:${TOKEN}`]],
+  );
+});
+
+test("WHM names the privilege when the user may not list accounts", async () => {
+  const { client, calls } = whmFixture(
+    {
+      [`GET ${BASE}/json-api/listaccts`]: () =>
+        whmFail(
+          "listaccts",
+          "Permission denied: You do not have the required privileges to run “listaccts”.",
+        ),
+    },
+    { user: "wpres" },
+  );
   await assert.rejects(client.validate(), {
     code: "credential_invalid",
     message:
-      "This WHM token is not a root token. Create the token while logged in to WHM as root.",
+      "This WHM user cannot list accounts. Ask the server owner to give it the list-accts privilege (WHM » Edit Reseller Nameservers and Privileges).",
   });
-  assert.equal(calls.length, 1);
+  await assert.rejects(client.listSites(), {
+    code: "credential_invalid",
+    message: /cannot list accounts/,
+  });
+  assert.equal(calls.length, 2);
 });
 
-test("WHM refuses privileges it cannot read as root", async () => {
-  for (const data of [{}, { privileges: [] }, { privileges: "all" }, null]) {
-    const { client, calls } = whmFixture({
-      ...VALID,
-      [`GET ${BASE}/json-api/myprivs`]: () => whmOk("myprivs", data),
-    });
-    await assert.rejects(client.validate(), { code: "credential_invalid" });
-    assert.equal(calls.length, 1);
-  }
+test("only a reason that starts with Permission denied is a missing privilege", async () => {
+  const { client } = whmFixture({
+    [`GET ${BASE}/json-api/listaccts`]: () =>
+      whmFail("listaccts", "Account list unavailable: Permission denied"),
+  });
+  await assert.rejects(client.validate(), { code: "provider_error" });
 });
 
 test("WHM maps 403 to credential_invalid and a failed WHM call to provider_error", async () => {
   const denied = whmFixture({
-    [`GET ${BASE}/json-api/myprivs`]: () => [
+    [`GET ${BASE}/json-api/listaccts`]: () => [
       403,
       "Access denied",
       "text/plain",
@@ -94,7 +112,7 @@ test("WHM maps 403 to credential_invalid and a failed WHM call to provider_error
   await assert.rejects(denied.client.validate(), {
     code: "credential_invalid",
     message:
-      "WHM rejected the API token. Check that it is a root API token from WHM » Development » Manage API Tokens and has not been revoked.",
+      "WHM rejected the API token. Check that the WHM user is the one that created the token in WHM » Development » Manage API Tokens and that the token has not been revoked.",
   });
   const failed = whmFixture({
     ...VALID,
@@ -133,17 +151,17 @@ test("WHM bounds the failure reason and falls back when there is none", async ()
 
 test("WHM says when the address does not answer as WHM", async () => {
   const notFound = whmFixture({
-    [`GET ${BASE}/json-api/myprivs`]: () => [404, "Not Found", "text/html"],
+    [`GET ${BASE}/json-api/listaccts`]: () => [404, "Not Found", "text/html"],
   });
   const page = whmFixture({
-    [`GET ${BASE}/json-api/myprivs`]: () => [
+    [`GET ${BASE}/json-api/listaccts`]: () => [
       200,
       "<html>login</html>",
       "text/html",
     ],
   });
   const noEnvelope = whmFixture({
-    [`GET ${BASE}/json-api/myprivs`]: () => [200, { hello: "world" }],
+    [`GET ${BASE}/json-api/listaccts`]: () => [200, { hello: "world" }],
   });
   for (const { client } of [notFound, page, noEnvelope])
     await assert.rejects(client.validate(), {
@@ -163,7 +181,7 @@ test("WHM names the certificate problem", async () => {
   });
 });
 
-test("WHM requires an HTTPS root URL and the root user", () => {
+test("WHM requires an HTTPS root URL and a user name that fits the header", () => {
   for (const baseUrl of [
     "http://whm.example.test:2087",
     "https://u:p@whm.example.test:2087",
@@ -180,10 +198,13 @@ test("WHM requires an HTTPS root URL and the root user", () => {
       message:
         "WHM needs its own address, usually on port 2087, not the cPanel port.",
     });
-  assert.throws(() => whmFixture({}, { user: "reseller1" }), {
-    code: "config_error",
-    message: /root/,
-  });
+  for (const user of ["Root", "res:ller", "res ller", "1reseller", ""])
+    assert.throws(() => whmFixture({}, { user }), {
+      code: "config_error",
+      message:
+        "Enter the WHM user that created the API token: root or a reseller user name.",
+    });
+  assert.doesNotThrow(() => whmFixture({}, { user: "reseller1" }));
 });
 
 test("WHM without a configured URL makes no request", async () => {
@@ -335,7 +356,7 @@ test("an inner UAPI failure keeps the cPanel message; a missing account is not_f
     {
       code: "not_found",
       message:
-        "The cPanel account gone is suspended or no longer exists on this server.",
+        "The cPanel account gone is suspended, no longer exists on this server, or is not managed by this WHM user.",
     },
   );
 });
@@ -570,7 +591,7 @@ test("an unknown account on the feature check is the same not_found as for UAPI"
   await assert.rejects(api.toolkitInstallations(), {
     code: "not_found",
     message:
-      "The cPanel account wptest is suspended or no longer exists on this server.",
+      "The cPanel account wptest is suspended, no longer exists on this server, or is not managed by this WHM user.",
   });
 });
 
@@ -972,7 +993,7 @@ test("WHM leaves suspended accounts out and refuses their ids", async () => {
     ["wptest:wp.example.test"],
   );
   const message =
-    "The cPanel account susp is suspended or no longer exists on this server.";
+    "The cPanel account susp is suspended, no longer exists on this server, or is not managed by this WHM user.";
   await assert.rejects(client.getSite("susp:x.test"), {
     code: "not_found",
     message,
@@ -984,7 +1005,7 @@ test("WHM leaves suspended accounts out and refuses their ids", async () => {
   await assert.rejects(client.getSite("ghost:x.test"), {
     code: "not_found",
     message:
-      "The cPanel account ghost is suspended or no longer exists on this server.",
+      "The cPanel account ghost is suspended, no longer exists on this server, or is not managed by this WHM user.",
   });
   assert.deepEqual(
     proxied(calls).filter((call) =>
@@ -1579,7 +1600,7 @@ test("an account removed after the listing fails a backup with the account messa
       {
         code: "not_found",
         message:
-          "The cPanel account wptest is suspended or no longer exists on this server.",
+          "The cPanel account wptest is suspended, no longer exists on this server, or is not managed by this WHM user.",
       },
     );
     assert.equal(backupStarts(calls).length, 1);
@@ -1600,7 +1621,7 @@ test("an account removed after the listing fails a backup with the account messa
     await assert.rejects(run(), {
       code: "not_found",
       message:
-        "The cPanel account wptest is suspended or no longer exists on this server.",
+        "The cPanel account wptest is suspended, no longer exists on this server, or is not managed by this WHM user.",
     });
   assert.deepEqual(proxied(gone.calls), []);
 });

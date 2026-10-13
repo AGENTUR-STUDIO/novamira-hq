@@ -196,9 +196,9 @@ const PROVIDER_FORM_META: JsonValue = {
   whm: {
     companyLabel: "WHM user",
     companyPlaceholder: "root",
-    companyHelp: "Novamira HQ connects as root. Leave blank to use root.",
+    companyHelp: "root, or your reseller user name. Leave blank to use root.",
     credentialHelp:
-      "Paste a WHM API token created as root in WHM → Development → Manage API Tokens. A root token controls the whole server; create one only for Novamira HQ so you can revoke it there.",
+      "Paste a WHM API token created by that user in WHM → Development → Manage API Tokens. A root token controls the whole server, a reseller token the accounts that reseller owns; create one only for Novamira HQ so you can revoke it there.",
   },
 };
 

@@ -481,7 +481,7 @@ test("config add whm validates the token whatever --company says, and a failure 
       validate: () => {
         throw new CliError(
           "credential_invalid",
-          "This WHM token is not a root token. Create the token while logged in to WHM as root.",
+          "This WHM user cannot list accounts. Ask the server owner to give it the list-accts privilege (WHM » Edit Reseller Nameservers and Privileges).",
         );
       },
     });

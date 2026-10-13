@@ -796,10 +796,12 @@ test("cPanel needs a panel address and a username before anything is saved", asy
 });
 
 /**
- * The real WHM client over a mock WHM: `root: false` answers `myprivs` with a
- * reseller's privileges. Every request is recorded by its path.
+ * The real WHM client over a mock WHM: `listAllowed: false` refuses
+ * `listaccts` as WHM refuses a missing privilege. Every request is recorded by
+ * its path, and every authorization header in `authorizations`.
  */
-function whmServer({ root = true } = {}) {
+function whmServer({ listAllowed = true } = {}) {
+  const authorizations = [];
   const requests = [];
   const ok = (command, data) =>
     new Response(
@@ -809,19 +811,30 @@ function whmServer({ root = true } = {}) {
       }),
       { headers: { "content-type": "application/json" } },
     );
-  const fetch = async (input) => {
+  const fetch = async (input, init = {}) => {
     const url = new URL(String(input));
     requests.push(url.pathname);
-    if (url.pathname === "/json-api/myprivs")
-      return ok("myprivs", {
-        privileges: [root ? { all: 1 } : { all: 0, "list-accts": 1 }],
-      });
+    authorizations.push(new Headers(init.headers).get("authorization"));
     if (url.pathname === "/json-api/listaccts")
-      return ok("listaccts", { acct: [] });
+      return listAllowed
+        ? ok("listaccts", { acct: [] })
+        : new Response(
+            JSON.stringify({
+              metadata: {
+                command: "listaccts",
+                result: 0,
+                reason:
+                  "Permission denied: You do not have the required privileges to run “listaccts”.",
+                version: 1,
+              },
+            }),
+            { headers: { "content-type": "application/json" } },
+          );
     return new Response("{}", { status: 404 });
   };
   return {
     requests,
+    authorizations,
     options: {
       registry: { whm: createWhmClient },
       http: { fetch, retry: { maxAttempts: 1 } },
@@ -867,15 +880,15 @@ test("WHM needs an address, and a blank user is saved as root", async () => {
   assert.equal(profile.apiBaseUrl, "https://server.example.test:2087");
 });
 
-test("a WHM token that is not root is refused before anything is saved", async () => {
-  const whm = whmServer({ root: false });
+test("a WHM token that cannot list accounts is refused before anything is saved", async () => {
+  const whm = whmServer({ listAllowed: false });
   const { server, store, credentialsDir, security } = await fixture(
     whm.options,
   );
   const { recorder } = await save(server, WHM_FORM);
   assert.match(
     recorder.find("provider-flash").markup,
-    /This WHM token is not a root token/,
+    /This WHM user cannot list accounts\. Ask the server owner to give it the list-accts privilege/,
   );
   assert.ok(!recorder.body.includes(SECRET));
   assert.deepEqual(await store.listHostingProfiles(), []);
@@ -887,8 +900,7 @@ test("a WHM token that is not root is refused before anything is saved", async (
     ),
     undefined,
   );
-  // Never listed: the root check comes first.
-  assert.deepEqual(whm.requests, ["/json-api/myprivs"]);
+  assert.deepEqual(whm.requests, ["/json-api/listaccts"]);
   // A WHM address on a cPanel port is refused the same way.
   const port = await save(server, {
     ...WHM_FORM,
@@ -916,7 +928,16 @@ test("a valid WHM root token is saved verified, checked once", async () => {
   assert.equal(stored?.reveal(), SECRET);
   assert.ok(recorder.find("main").markup.includes("Hosting account ready"));
   assert.ok(!recorder.body.includes(SECRET));
-  assert.deepEqual(whm.requests, ["/json-api/myprivs", "/json-api/listaccts"]);
+  assert.deepEqual(whm.requests, ["/json-api/listaccts"]);
+});
+
+test("a WHM reseller token is checked and saved as that reseller", async () => {
+  const whm = whmServer();
+  const { server, store } = await fixture(whm.options);
+  const { recorder } = await save(server, { ...WHM_FORM, companyId: "wpres" });
+  assert.ok(recorder.find("main").markup.includes("Hosting account ready"));
+  assert.equal((await store.load()).hostingProfiles.server.companyId, "wpres");
+  assert.deepEqual(whm.authorizations, [`whm wpres:${SECRET}`]);
 });
 
 test("saving checks the connection immediately and reports an unverified saved account honestly", async () => {

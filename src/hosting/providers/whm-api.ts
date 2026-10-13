@@ -9,6 +9,7 @@ import type { ProviderClientContext } from "../factory.js";
 import type { HttpBody, HttpClient } from "../http-client.js";
 import {
   type CpanelApi,
+  CPANEL_USERNAME,
   certificateFailure,
   NO_TOOLKIT_STATUSES,
   notAnApiAnswer,
@@ -23,6 +24,8 @@ import {
 const CPANEL_PORT = "2083";
 
 export interface WhmTarget {
+  /** The WHM user the token belongs to: `root` or a reseller. */
+  readonly user: string;
   /** `https://host:port` of WHM, no path. */
   readonly origin: string;
   /** `https://<host>:2083`: where each account's cPanel answers. */
@@ -32,10 +35,13 @@ export interface WhmTarget {
 export function whmTarget(context: ProviderClientContext): WhmTarget {
   if (context.secret.length === 0)
     throw new CliError("credential_missing", "The WHM API token is empty.");
-  if ((context.identity ?? "root") !== "root")
+  const user = context.identity ?? "root";
+  // The user goes into the `whm <user>:<token>` header, so nothing that could
+  // change its shape is accepted.
+  if (!CPANEL_USERNAME.test(user))
     throw new CliError(
       "config_error",
-      "Novamira HQ connects to WHM as root. Set the user to root and use a root API token.",
+      "Enter the WHM user that created the API token: root or a reseller user name.",
     );
   let url: URL;
   try {
@@ -64,7 +70,7 @@ export function whmTarget(context: ProviderClientContext): WhmTarget {
     );
   const cpanel = new URL(url.origin);
   cpanel.port = CPANEL_PORT;
-  return { origin: url.origin, cpanelOrigin: cpanel.origin };
+  return { user, origin: url.origin, cpanelOrigin: cpanel.origin };
 }
 
 export interface WhmCallOptions {
@@ -82,6 +88,8 @@ export interface WhmRequestInit {
 }
 
 export interface WhmApi {
+  /** The WHM user the token belongs to: `root` or a reseller. */
+  readonly user: string;
   readonly origin: string;
   readonly cpanelOrigin: string;
   /**
@@ -98,13 +106,23 @@ export interface WhmApi {
   request(path: string, init?: WhmRequestInit): Promise<unknown>;
   /**
    * `/json-api/<fn>?api.version=1&...`; returns the envelope's `data` and
-   * throws when `metadata.result` is not 1.
+   * throws when `metadata.result` is not 1. A function the user's privileges
+   * do not allow fails with `details.permissionDenied: true`, so a caller can
+   * name the privilege to ask for.
    */
   call(
     fn: string,
     params?: Readonly<Record<string, string>>,
     options?: WhmCallOptions,
   ): Promise<unknown>;
+}
+
+/** How WHM API 1 refuses a function the user's privileges do not allow. */
+const PERMISSION_DENIED = /^Permission denied\b/;
+
+/** `call` failed because the user's privileges do not allow the function. */
+export function permissionDenied(error: unknown): boolean {
+  return error instanceof CliError && error.details?.permissionDenied === true;
 }
 
 const NOT_WHM =
@@ -138,7 +156,7 @@ async function whmGuarded<T>(
       )
         throw new CliError(
           "credential_invalid",
-          "WHM rejected the API token. Check that it is a root API token from WHM » Development » Manage API Tokens and has not been revoked.",
+          "WHM rejected the API token. Check that the WHM user is the one that created the token in WHM » Development » Manage API Tokens and that the token has not been revoked.",
         );
       if (notApiAnswer && notAnApiAnswer(error))
         throw new CliError("provider_error", NOT_WHM);
@@ -162,7 +180,7 @@ function limits(
 export function createWhmApi(context: ProviderClientContext): WhmApi {
   const target = whmTarget(context);
   const token = context.secret.reveal();
-  const header = `whm root:${token}`;
+  const header = `whm ${target.user}:${token}`;
   const http: HttpClient = context.createHttpClient({
     auth: {
       authorize: () => ({
@@ -172,6 +190,7 @@ export function createWhmApi(context: ProviderClientContext): WhmApi {
     },
   });
   return {
+    user: target.user,
     origin: target.origin,
     cpanelOrigin: target.cpanelOrigin,
     async request(path, init = {}) {
@@ -213,6 +232,9 @@ export function createWhmApi(context: ProviderClientContext): WhmApi {
         reason === ""
           ? `WHM ${fn} failed.`
           : `WHM ${fn} failed: ${reason.slice(0, 300)}`,
+        PERMISSION_DENIED.test(reason)
+          ? { details: { permissionDenied: true } }
+          : {},
       );
     },
   };
@@ -328,11 +350,11 @@ const WP_TOOLKIT_FEATURE = "wp-toolkit";
 const NO_UPLOADS = "File uploads through WHM are not available.";
 const NO_ACCOUNT = "You do not have a user named";
 
-/** One wording for an account HQ cannot reach: removed, never there, or suspended. */
+/** One wording for an account HQ cannot reach: removed, never there, suspended, or another owner's. */
 export function accountGone(user: string): CliError {
   return new CliError(
     "not_found",
-    `The cPanel account ${user} is suspended or no longer exists on this server.`,
+    `The cPanel account ${user} is suspended, no longer exists on this server, or is not managed by this WHM user.`,
   );
 }
 
@@ -368,8 +390,10 @@ function accountHome(value: unknown): string {
 
 /**
  * Makes WHM look like one cPanel account to the cPanel modules: UAPI goes
- * through the root-only `uapi_cpanel` proxy for `user`, WP Toolkit through the
- * WHM-level endpoint shared by `toolkit`. File uploads need a cPanel session
+ * through the `uapi_cpanel` proxy for `user` (root may use it for every
+ * account, a reseller for the accounts it owns), WP Toolkit through the
+ * WHM-level endpoint shared by `toolkit` (a reseller token gets 401 there,
+ * which the installation list reads as no WP Toolkit). File uploads need a cPanel session
  * the proxy cannot give, so they go through `options.uploads`, opened on the
  * first upload and closed by `close()`.
  */

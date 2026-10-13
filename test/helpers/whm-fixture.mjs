@@ -98,7 +98,3 @@ export const whmFail = (command, reason) => [
   200,
   { metadata: { command, result: 0, reason, version: 1 } },
 ];
-
-export const ROOT_PRIVS = whmOk("myprivs", {
-  privileges: [{ all: 1, "suspend-acct": 0 }],
-});

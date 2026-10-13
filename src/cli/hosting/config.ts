@@ -264,8 +264,8 @@ export function createHostingConfigHandlers(
   ): Promise<string | undefined> => {
     const requested = selection.trim();
     const none = requested === COMPANY_NONE || requested === "";
-    // A WHM token is always checked before it is saved: a root API token is
-    // the whole server, and a reseller or mistyped one must not be stored.
+    // A WHM token is always checked before it is saved: it reaches every
+    // account it may list, and a mistyped or revoked one must not be stored.
     const validateFirst = provider === "whm";
     if (!validateFirst) {
       if (none) return undefined;

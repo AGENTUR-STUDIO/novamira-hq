@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- WHM servers can now be connected with a reseller's API token as well as
+  root's: enter the reseller's user name as the WHM user. HQ then lists
+  WordPress, creates and lists backups only for the accounts that reseller
+  owns, and sets up Novamira with the temporary installer after your
+  approval, since WHM's WP Toolkit does not accept reseller tokens. The
+  reseller needs the list-accts privilege, and create-user-session for the
+  installer; when one is missing, HQ names it.
+
 ## 1.0.0-beta5 - 2026-10-12
 
 ### Changed

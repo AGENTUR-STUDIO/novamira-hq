@@ -1,7 +1,10 @@
 // SPDX-FileCopyrightText: 2026 Ovation S.r.l. <dev@novamira.ai>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-/** WHM server adapter over WHM API 1 with a root API token. */
+/**
+ * WHM server adapter over WHM API 1 with an API token of root (every account
+ * on the server) or of a reseller (the accounts it owns).
+ */
 
 import { CliError } from "../../errors.js";
 import { asRecord } from "../../json.js";
@@ -52,6 +55,7 @@ import {
   createAccountApi,
   createWhmApi,
   createWhmToolkit,
+  permissionDenied,
   type WhmApi,
   type WhmToolkit,
 } from "./whm-api.js";
@@ -165,24 +169,32 @@ class WhmClient implements ProviderClient {
 
   async validate(): Promise<ProviderValidation> {
     await this.#requireConfigured();
-    // The root privilege is checked first so a reseller or limited token is
-    // refused before any account is listed.
-    const privileges = asRecord(await this.#whm.call("myprivs"))?.privileges;
-    const first = Array.isArray(privileges)
-      ? asRecord(privileges[0])
-      : undefined;
-    if (first?.all !== 1)
-      throw new CliError(
-        "credential_invalid",
-        "This WHM token is not a root token. Create the token while logged in to WHM as root.",
-      );
-    await this.#whm.call("listaccts", { want: "user" });
+    // Listing accounts is the one privilege every operation needs; WHM answers
+    // root with every account and a reseller with the accounts it owns.
+    await this.#listaccts({ want: "user" });
     return {
       provider: PROVIDER,
       status: "active",
-      companyId: "root",
+      companyId: this.#whm.user,
       credential: this.#credentialSource,
     };
+  }
+
+  /** `listaccts`, naming the privilege when the user's do not allow it. */
+  async #listaccts(
+    params: Readonly<Record<string, string>>,
+    signal?: AbortSignal,
+  ): Promise<unknown> {
+    try {
+      return await this.#whm.call("listaccts", params, { signal });
+    } catch (error) {
+      if (permissionDenied(error))
+        throw new CliError(
+          "credential_invalid",
+          "This WHM user cannot list accounts. Ask the server owner to give it the list-accts privilege (WHM » Edit Reseller Nameservers and Privileges).",
+        );
+      throw error;
+    }
   }
 
   /**
@@ -191,11 +203,7 @@ class WhmClient implements ProviderClient {
    */
   async #accounts(signal?: AbortSignal): Promise<readonly string[]> {
     const rows = asRecord(
-      await this.#whm.call(
-        "listaccts",
-        { want: "user,domain,suspended" },
-        { signal },
-      ),
+      await this.#listaccts({ want: "user,domain,suspended" }, signal),
     )?.acct;
     if (!Array.isArray(rows))
       throw new CliError(

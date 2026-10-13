@@ -48,7 +48,7 @@ const PLACEHOLDER = "registry-fake-credential-not-a-real-secret";
  */
 const IDENTITY = "registry-fake-identity";
 
-/** WHM only connects as root, so its identity half is fixed. */
+/** WHM's identity half is a WHM user name; root is always one. */
 const identityFor = (kind) => (kind === "whm" ? "root" : IDENTITY);
 const absentExtensionsFetch = async () =>
   new Response("[]", { headers: { "content-type": "application/json" } });

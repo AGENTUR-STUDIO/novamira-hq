@@ -22,7 +22,11 @@ import {
   certificateFailure,
   uapiEnvelopeData,
 } from "./cpanel-uapi.js";
-import type { AccountApiOptions, WhmApi } from "./whm-api.js";
+import {
+  type AccountApiOptions,
+  permissionDenied,
+  type WhmApi,
+} from "./whm-api.js";
 
 const UNUSABLE_SESSION =
   "WHM returned an unusable cPanel session. Nothing was uploaded.";
@@ -30,6 +34,8 @@ const LOGIN_FAILED =
   "cPanel did not open the temporary session. Nothing was uploaded.";
 const SESSION_REFUSED =
   "The temporary cPanel session was refused. Nothing was installed.";
+const SESSION_DENIED =
+  "This WHM user cannot open cPanel sessions, which the temporary installer needs. Ask the server owner to give it the create-user-session privilege (WHM » Edit Reseller Nameservers and Privileges). Nothing was uploaded.";
 const SESSION_CLOSED =
   "The temporary cPanel session is closed. Nothing was uploaded.";
 
@@ -157,13 +163,19 @@ export function sessionUploads(
     const isClosed = (): boolean => closed;
 
     async function open(signal: AbortSignal | undefined): Promise<OpenSession> {
-      const target = loginTarget(
-        await whm.call(
+      let created: unknown;
+      try {
+        created = await whm.call(
           "create_user_session",
           { user, service: "cpaneld" },
           { signal },
-        ),
-      );
+        );
+      } catch (error) {
+        if (permissionDenied(error))
+          throw new CliError("provider_error", SESSION_DENIED);
+        throw error;
+      }
+      const target = loginTarget(created);
       if (target === undefined)
         throw new CliError("provider_error", UNUSABLE_SESSION);
       const { pathname, prefix, session } = target;
