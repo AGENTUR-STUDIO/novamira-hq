@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.0.0-beta6 - 2026-10-13
 
 ### Added
 
@@ -11,6 +11,14 @@
   approval, since WHM's WP Toolkit does not accept reseller tokens. The
   reseller needs the list-accts privilege, and create-user-session for the
   installer; when one is missing, HQ names it.
+
+### Changed
+
+- Windows releases now ship only the installer,
+  `novamira-hq-setup-windows-x86_64.exe`. The portable
+  `novamira-hq-desktop-windows-x86_64.exe` is no longer published; download
+  the installer from https://novamira.ai/hq if your version does not offer
+  the update.
 
 ## 1.0.0-beta5 - 2026-10-12
 

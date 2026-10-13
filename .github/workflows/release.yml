@@ -75,7 +75,6 @@ jobs:
             artifact: novamira-hq-desktop-windows-x86_64
             asset: novamira-hq-setup-windows-x86_64.exe
             binary: novamira-hq-setup-windows-x86_64.exe
-            archive: novamira-hq-desktop-windows-x86_64.exe
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
@@ -97,18 +96,13 @@ jobs:
       - if: runner.os == 'Linux'
         shell: bash
         run: mv "dist-desktop/${{ matrix.binary }}" "dist-desktop/${{ matrix.asset }}"
-      # Versions before the installer look for the portable name. Transition
-      # release only: remove this step and the archive name in the next one.
-      - if: runner.os == 'Windows'
-        shell: bash
-        run: cp "dist-desktop/novamira-hq-setup-windows-x86_64.exe" "dist-desktop/novamira-hq-desktop-windows-x86_64.exe"
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           # Named for the pattern github-release downloads.
           name: ${{ matrix.artifact }}-release
           path: |
             dist-desktop/${{ matrix.asset }}
-            dist-desktop/${{ matrix.archive }}
+            dist-desktop/${{ matrix.archive || matrix.asset }}
           if-no-files-found: error
 
   desktop-macos:
