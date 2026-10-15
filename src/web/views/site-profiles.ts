@@ -82,7 +82,7 @@ function renderProfileMenu(
   const rename = post(url(RENAME_PATH, { name, ...routeContext }), {
     include: [renameSignal],
   });
-  const items = html`<a class="profile-menu-action"${hrefAttr(url("/novamira-pro", { site: name }))}>Install Novamira Pro…</a><details class="profile-rename"><summary class="button tiny quiet profile-menu-action">Rename</summary><form class="rename-profile"${ds.signals(
+  const items = html`<a class="profile-menu-action"${hrefAttr(url("/novamira-pro", { site: name }))}>Install Novamira Pro…</a><a class="profile-menu-action"${hrefAttr(url("/read-mode", { site: name }))}>Turn on Read Mode…</a><details class="profile-rename"><summary class="button tiny quiet profile-menu-action">Rename</summary><form class="rename-profile"${ds.signals(
     {
       [renameSignal]: name,
     },

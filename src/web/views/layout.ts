@@ -172,6 +172,7 @@ function navLink(
     current === page ||
     (current === "novamira-setup" && page === "sites") ||
     (current === "novamira-pro" && page === "sites") ||
+    (current === "read-mode" && page === "sites") ||
     (current === "push-new" && page === "pushes");
   return html`<a${classAttr("nav-link", active && "active")}${hrefAttr(
     url(href),
@@ -202,6 +203,7 @@ function pageTitle(page: DashboardPage): string {
     "push-new": "New push",
     "novamira-setup": "Novamira setup",
     "novamira-pro": "Novamira Pro",
+    "read-mode": "Read Mode",
     diagnostics: "Diagnostics",
     updates: "App updates",
     settings: "Settings",

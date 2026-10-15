@@ -15,6 +15,7 @@ import { asRecord } from "../json.js";
 import { CliError } from "../errors.js";
 import { readBoundedText } from "../provisioning/http.js";
 import { PRO_PREFLIGHT, proInstallPhp, proConfigurePhp } from "./php.js";
+import { createReadModeService, type ReadModeService } from "./read-mode.js";
 
 const LICENSE_ID = createHash("sha256")
   .update("novamira-hq:novamira-pro:license:v1")
@@ -41,6 +42,7 @@ export interface ProService {
   remove(): Promise<void>;
   plan(site: string): Promise<ProReview>;
   install(id: string): Promise<string>;
+  readonly readMode: ReadModeService;
 }
 
 const PHP_ERRORS: Readonly<Record<string, string>> = {
@@ -165,6 +167,10 @@ export function createProService(options: {
     }
   }
   return {
+    readMode: createReadModeService({
+      operations: options.operations,
+      profiles: options.profiles,
+    }),
     async view(site) {
       let last4: string | undefined;
       try {

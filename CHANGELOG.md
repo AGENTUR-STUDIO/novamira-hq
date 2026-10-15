@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- Read Mode can now be turned on for a connected site from its menu in
+  Sites, and from the Novamira Pro page after installing Pro. HQ first checks
+  the site, then turns Read Mode on through Novamira Pro. It needs an
+  up-to-date Novamira Pro with an active license. HQ does not turn Read Mode
+  off: a WordPress administrator does that on the Read Mode page in the
+  Novamira menu or with `wp novamira read-mode disable`.
+
 ## 1.0.0-beta6 - 2026-10-13
 
 ### Added

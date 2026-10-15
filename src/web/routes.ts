@@ -101,6 +101,7 @@ import {
 } from "./handlers/site-profiles.js";
 import { createSitesHandler } from "./handlers/sites.js";
 import { createProHandler } from "./handlers/pro.js";
+import { createReadModeHandler, readModeSite } from "./handlers/read-mode.js";
 import { createAgentSetupHandler } from "./handlers/agent-setup.js";
 import { isAgentCliSetupEnabled } from "../agent-connection.js";
 import {
@@ -288,6 +289,7 @@ const PAGE_PATHS: Readonly<Record<string, DashboardPage>> = {
   "/diagnostics": "diagnostics",
   "/settings": "settings",
   "/novamira-pro": "novamira-pro",
+  "/read-mode": "read-mode",
   "/updates": "updates",
   "/history": "history",
   "/hosting-activity": "history",
@@ -618,6 +620,9 @@ function pageHandler(context: RouteContext, page: DashboardPage): RouteHandler {
             pro: await context.pro.view(request.query.get("site") ?? undefined),
           }
         : {}),
+      ...(renderedPage === "read-mode"
+        ? { readMode: readModeSite(request.query.get("site")) }
+        : {}),
       ...(sitesSnapshot ? { sitesSnapshot } : {}),
       ...extras,
       view,
@@ -742,6 +747,18 @@ export function createRouteTable(context: RouteContext): readonly Route[] {
       path: "/_dashboard/pro/install",
       auth: "token",
       handler: createProHandler(context, "install"),
+    },
+    {
+      method: "POST",
+      path: "/_dashboard/read-mode/check",
+      auth: "token",
+      handler: createReadModeHandler(context, "check"),
+    },
+    {
+      method: "POST",
+      path: "/_dashboard/read-mode/enable",
+      auth: "token",
+      handler: createReadModeHandler(context, "enable"),
     },
     {
       method: "GET",

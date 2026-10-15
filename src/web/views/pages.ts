@@ -67,6 +67,7 @@ import { renderHowToUsePage } from "./how-to-use.js";
 import { renderProvidersPage } from "./providers.js";
 import { renderSettingsPage, type SettingsTab } from "./settings.js";
 import { renderProPage } from "./pro.js";
+import { renderReadModePage } from "./read-mode.js";
 import { renderUpdatesPage } from "./updates.js";
 import { renderSetupPage, type SetupView } from "./setup.js";
 import type { SitesResult } from "../services/sites.js";
@@ -82,6 +83,7 @@ export interface PageModel {
   readonly agentSetup?: import("../../agent-connection.js").AgentSetupView;
   readonly agentSetupError?: string;
   readonly pro?: import("../../pro/service.js").ProView;
+  readonly readMode?: import("../../pro/read-mode.js").ReadModeView;
   readonly updatesAvailable?: boolean;
   readonly desktopUpdates?: boolean;
   readonly hostingTools?: HostingToolsView;
@@ -220,6 +222,8 @@ export function renderPageBody(page: DashboardPage, model: PageModel): Html {
       );
     case "novamira-pro":
       return renderProPage(model.pro ?? {});
+    case "read-mode":
+      return renderReadModePage(model.readMode ?? {});
     case "updates":
       return renderUpdatesPage(
         model.view.version,
