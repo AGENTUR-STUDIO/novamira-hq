@@ -172,7 +172,17 @@ jobs:
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: ${{ matrix.asset }}-acceptance
-          path: dist-desktop
+          path: ${{ runner.temp }}/acceptance
+      # Take only the two acceptance executables from the artifact.
+      - shell: bash
+        run: |
+          acceptance="$RUNNER_TEMP/acceptance"
+          for file in spawn-acceptance registrar-acceptance; do
+            test -f "$acceptance/$file"
+            test ! -L "$acceptance/$file"
+            cp "$acceptance/$file" "dist-desktop/$file"
+          done
+          test "$(find "$acceptance" -mindepth 1 \( -type f -o -type l \) | wc -l)" -eq 2
       - run: chmod +x "dist-desktop/$ASSET" dist-desktop/spawn-acceptance dist-desktop/registrar-acceptance
       - name: Report the code signature
         run: |

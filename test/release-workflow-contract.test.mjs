@@ -141,7 +141,10 @@ test("Windows signing jobs run no repository code", () => {
     /dist-desktop\/registrar-acceptance\.exe\n/,
   );
   const windows = named("desktop-windows");
-  assert.match(windows, /name: windows-acceptance\n/);
+  assert.match(
+    windows,
+    /name: windows-acceptance\n {10}path: \$\{\{ runner\.temp \}\}\/acceptance\n/,
+  );
   assert.doesNotMatch(windows, /id-token|secrets\.|environment:/);
   assert.match(
     windows,
@@ -273,7 +276,10 @@ test("macOS builds, signs and verifies in separate jobs", () => {
   assert.match(build, /dist-desktop\/registrar-acceptance\n/);
   assert.doesNotMatch(sign, /-acceptance\n/);
   const verify = named("desktop-macos");
-  assert.match(verify, /name: \$\{\{ matrix\.asset \}\}-acceptance\n/);
+  assert.match(
+    verify,
+    /name: \$\{\{ matrix\.asset \}\}-acceptance\n {10}path: \$\{\{ runner\.temp \}\}\/acceptance\n/,
+  );
   assert.match(verify, /needs: \[prepare, sign-macos\]/);
   assert.match(verify, /name: \$\{\{ matrix\.asset \}\}-signed\n/);
   assert.match(verify, /\$ASSET\.app\.zip/);
