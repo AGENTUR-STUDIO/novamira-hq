@@ -35,9 +35,6 @@ InstallDirRegKey HKCU "${UNINSTALL_KEY}" "InstallLocation"
 ; With /DUNINSTALLER=<path> this script builds a program that only writes the
 ; uninstaller there. The release signs that uninstaller, and the installer
 ; then ships it as a file instead of writing an unsigned one.
-!ifdef UNINSTALLER
-  SetCompress off
-!endif
 
 !define MUI_ICON "${STAGE}\novamira-hq.ico"
 !ifdef UNINSTALLER
@@ -82,6 +79,8 @@ FunctionEnd
 !ifdef UNINSTALLER
 Function .onInit
   WriteUninstaller "${UNINSTALLER}"
+  ; Quitting from .onInit otherwise reports a cancelled install.
+  SetErrorLevel 0
   Quit
 FunctionEnd
 
