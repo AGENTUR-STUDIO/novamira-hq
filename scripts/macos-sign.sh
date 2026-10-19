@@ -53,9 +53,9 @@ fail() {
 retry() {
   local attempt=1
   until "$@"; do
-    [ "$attempt" -lt 4 ] || return 1
-    printf 'macos-sign: %s %s failed (attempt %s of 4), retrying\n' "$1" "${2:-}" "$attempt" >&2
-    sleep $((attempt * 20))
+    [ "$attempt" -lt 6 ] || return 1
+    printf 'macos-sign: %s %s failed (attempt %s of 6), retrying\n' "$1" "${2:-}" "$attempt" >&2
+    sleep $((attempt * 30))
     attempt=$((attempt + 1))
   done
 }

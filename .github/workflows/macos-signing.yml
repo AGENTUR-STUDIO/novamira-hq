@@ -71,12 +71,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - runner: macos-latest
-            asset: novamira-hq-desktop-macos-arm64
-          - runner: macos-15-intel
-            asset: novamira-hq-desktop-macos-x86_64
-    runs-on: ${{ matrix.runner }}
+        asset:
+          - novamira-hq-desktop-macos-arm64
+          - novamira-hq-desktop-macos-x86_64
+    # Both architectures are signed, notarized and stapled on Apple silicon.
+    runs-on: macos-latest
     env:
       ASSET: ${{ matrix.asset }}
     steps:
@@ -163,16 +162,20 @@ jobs:
           name: ${{ matrix.asset }}-signed
           path: dist-desktop
       - run: chmod +x "dist-desktop/$ASSET"
-      - name: Report what Apple and Gatekeeper say
+      - name: Report the code signature
         run: |
           codesign --display --verbose=4 "dist-desktop/$ASSET"
           codesign --display --entitlements - --xml "dist-desktop/$ASSET"
           codesign --verify --strict --verbose=2 "dist-desktop/$ASSET"
           unzip -q "dist-desktop/$ASSET.app.zip" -d "$RUNNER_TEMP/verify"
           codesign --verify --deep --strict --verbose=2 "$RUNNER_TEMP/verify/Novamira HQ.app"
+          ditto "$RUNNER_TEMP/verify/Novamira HQ.app/Contents/Helpers/Novamira HQ Credentials.app" "native/macos/Novamira HQ Credentials.app"
+      # Apple's ticket service is checked from Apple silicon, as in signing.
+      - name: Report what Apple and Gatekeeper say
+        if: matrix.runner == 'macos-latest'
+        run: |
           xcrun stapler validate "$RUNNER_TEMP/verify/Novamira HQ.app"
           spctl --assess --type execute -vv "$RUNNER_TEMP/verify/Novamira HQ.app"
-          ditto "$RUNNER_TEMP/verify/Novamira HQ.app/Contents/Helpers/Novamira HQ Credentials.app" "native/macos/Novamira HQ Credentials.app"
       - name: Test the native helper protocol without accessing credentials
         run: node --test test/macos-keychain-contract.test.mjs
       - name: Smoke-test the signed server role

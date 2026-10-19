@@ -237,15 +237,19 @@ test("macOS builds, signs and verifies in separate jobs", () => {
   );
   assertSignerTakesOnlyItsInputs(sign);
 
-  // Both macOS architectures, each compiled natively and signed on its own
-  // runner, and each publishing its bare executable and its `.app.zip`.
-  for (const name of ["macos-build", "sign-macos", "desktop-macos"]) {
+  // Both macOS architectures, each compiled and run on its own runner.
+  for (const name of ["macos-build", "desktop-macos"]) {
     const job = named(name);
     assert.match(job, /runner: macos-latest/, name);
     assert.match(job, /runner: macos-15-intel/, name);
     assert.match(job, /novamira-hq-desktop-macos-arm64/, name);
     assert.match(job, /novamira-hq-desktop-macos-x86_64/, name);
   }
+  // Both architectures are signed on Apple silicon.
+  assert.match(sign, /\n {4}runs-on: macos-latest\n/);
+  assert.doesNotMatch(sign, /macos-15-intel/);
+  assert.match(sign, /- novamira-hq-desktop-macos-arm64\n/);
+  assert.match(sign, /- novamira-hq-desktop-macos-x86_64\n/);
   const build = named("macos-build");
   assert.match(build, /needs: \[prepare, acceptance\]/);
   assert.match(build, /run: bun run desktop:build\n/);
