@@ -32,18 +32,27 @@ OutFile "${OUTFILE}"
 InstallDir "$LOCALAPPDATA\Programs\${APP}"
 InstallDirRegKey HKCU "${UNINSTALL_KEY}" "InstallLocation"
 
-; Code signing goes here (!finalize and !uninstfinalize) once a certificate exists.
+; With /DUNINSTALLER=<path> this script builds a program that only writes the
+; uninstaller there. The release signs that uninstaller, and the installer
+; then ships it as a file instead of writing an unsigned one.
+!ifdef UNINSTALLER
+  SetCompress off
+!endif
 
 !define MUI_ICON "${STAGE}\novamira-hq.ico"
-!define MUI_UNICON "${STAGE}\novamira-hq.ico"
+!ifdef UNINSTALLER
+  !define MUI_UNICON "${STAGE}\novamira-hq.ico"
+!endif
 !define MUI_FINISHPAGE_RUN
 !define MUI_FINISHPAGE_RUN_TEXT "Run ${APP}"
 !define MUI_FINISHPAGE_RUN_FUNCTION LaunchHQ
 !insertmacro MUI_PAGE_LICENSE "${STAGE}\LICENSE"
 !insertmacro MUI_PAGE_INSTFILES
 !insertmacro MUI_PAGE_FINISH
-!insertmacro MUI_UNPAGE_CONFIRM
-!insertmacro MUI_UNPAGE_INSTFILES
+!ifdef UNINSTALLER
+  !insertmacro MUI_UNPAGE_CONFIRM
+  !insertmacro MUI_UNPAGE_INSTFILES
+!endif
 !insertmacro MUI_LANGUAGE "English"
 
 ; HQ windows, servers, MCP processes and the command launcher lock their
@@ -70,6 +79,15 @@ Function LaunchHQ
   ${EndIf}
 FunctionEnd
 
+!ifdef UNINSTALLER
+Function .onInit
+  WriteUninstaller "${UNINSTALLER}"
+  Quit
+FunctionEnd
+
+Section "Install"
+SectionEnd
+!else
 Section "Install"
   !insertmacro StopRunning
   SetOutPath "$INSTDIR"
@@ -78,7 +96,7 @@ Section "Install"
   File "${STAGE}\SOURCE-OFFER.txt"
   File "${STAGE}\LGPL-2.1.txt"
   File "${STAGE}\THIRD-PARTY-NOTICES.txt"
-  WriteUninstaller "$INSTDIR\Uninstall.exe"
+  File "${STAGE}\Uninstall.exe"
   ; A headless console: with Windows Terminal as the default terminal, HQ's
   ; own console would otherwise stay open as an empty terminal window.
   CreateShortcut "$SMPROGRAMS\${APP}.lnk" "$WINDIR\System32\conhost.exe" '--headless "$INSTDIR\${EXE}"' "$INSTDIR\${EXE}" 0
@@ -92,7 +110,9 @@ Section "Install"
   WriteRegDWORD HKCU "${UNINSTALL_KEY}" "NoModify" 1
   WriteRegDWORD HKCU "${UNINSTALL_KEY}" "NoRepair" 1
 SectionEnd
+!endif
 
+!ifdef UNINSTALLER
 ; Settings, state and credentials stay, as the Settings uninstall help says.
 Section "Uninstall"
   !insertmacro StopRunning
@@ -107,3 +127,4 @@ Section "Uninstall"
   RMDir /r "$LOCALAPPDATA\Novamira HQ\State\command"
   DeleteRegKey HKCU "${UNINSTALL_KEY}"
 SectionEnd
+!endif

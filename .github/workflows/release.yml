@@ -101,6 +101,13 @@ jobs:
             dist-desktop/${{ matrix.archive || matrix.asset }}
           if-no-files-found: error
 
+  windows-release:
+    needs: prepare
+    runs-on: ubuntu-latest
+    environment: windows-release
+    steps:
+      - run: "true"
+
   windows-native:
     needs: [prepare, acceptance]
     runs-on: ubuntu-latest
@@ -123,7 +130,7 @@ jobs:
           if-no-files-found: error
 
   sign-windows-native:
-    needs: [windows-native]
+    needs: [windows-release, windows-native]
     name: sign / webview.dll
     runs-on: windows-latest
     environment: windows-signing
@@ -180,7 +187,9 @@ jobs:
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: windows-exe-unsigned
-          path: dist-desktop/novamira-hq-desktop.exe
+          path: |
+            dist-desktop/novamira-hq-desktop.exe
+            dist-desktop/Uninstall.exe
           if-no-files-found: error
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
@@ -191,7 +200,7 @@ jobs:
           if-no-files-found: error
 
   sign-windows-exe:
-    needs: [windows-compile]
+    needs: [windows-release, windows-compile]
     name: sign / novamira-hq-desktop.exe
     runs-on: windows-latest
     environment: windows-signing
@@ -212,7 +221,9 @@ jobs:
           endpoint: https://plc.codesigning.azure.net/
           signing-account-name: Novamira
           certificate-profile-name: ovation-public-trust
-          files: ${{ github.workspace }}\signing\novamira-hq-desktop.exe
+          files: |
+            ${{ github.workspace }}\signing\novamira-hq-desktop.exe
+            ${{ github.workspace }}\signing\Uninstall.exe
           file-digest: SHA256
           timestamp-digest: SHA256
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
@@ -249,7 +260,7 @@ jobs:
           if-no-files-found: error
 
   sign-windows-setup:
-    needs: [windows-package]
+    needs: [windows-release, windows-package]
     name: sign / novamira-hq-setup-windows-x86_64.exe
     runs-on: windows-latest
     environment: windows-signing
@@ -326,7 +337,7 @@ jobs:
       - name: Require valid Authenticode signatures from Ovation S.r.l.
         shell: pwsh
         run: |
-          foreach ($file in "dist-desktop/native-windows/webview.dll", "dist-desktop/novamira-hq-desktop.exe", "dist-desktop/$env:ASSET") {
+          foreach ($file in "dist-desktop/native-windows/webview.dll", "dist-desktop/novamira-hq-desktop.exe", "dist-desktop/Uninstall.exe", "dist-desktop/$env:ASSET") {
             $signature = Get-AuthenticodeSignature $file
             if ($signature.Status -ne "Valid" -or $signature.SignerCertificate.Subject -notlike "*O=Ovation S.r.l.*") {
               throw "$file is not validly signed by Ovation S.r.l.: $($signature.Status)"

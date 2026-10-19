@@ -97,11 +97,23 @@ test("Windows signing jobs run no repository code", () => {
   // the installer, then verify all three before the smoke test and upload.
   const chain = [
     ["windows-native", "prepare, acceptance", "windows-native-unsigned"],
-    ["sign-windows-native", "windows-native", "windows-native-signed"],
+    [
+      "sign-windows-native",
+      "windows-release, windows-native",
+      "windows-native-signed",
+    ],
     ["windows-compile", "prepare, sign-windows-native", "windows-exe-unsigned"],
-    ["sign-windows-exe", "windows-compile", "windows-exe-signed"],
+    [
+      "sign-windows-exe",
+      "windows-release, windows-compile",
+      "windows-exe-signed",
+    ],
     ["windows-package", "prepare, sign-windows-exe", "windows-setup-unsigned"],
-    ["sign-windows-setup", "windows-package", "windows-setup-signed"],
+    [
+      "sign-windows-setup",
+      "windows-release, windows-package",
+      "windows-setup-signed",
+    ],
   ];
   for (const [name, needs, uploads] of chain) {
     const job = named(name);
@@ -109,6 +121,15 @@ test("Windows signing jobs run no repository code", () => {
     assert.ok(job.includes(`    needs: [${needs}]\n`), `${name} needs`);
     assert.ok(job.includes(`          name: ${uploads}\n`), `${name} uploads`);
   }
+  assert.equal(
+    named("windows-release"),
+    "windows-release:\n" +
+      "    needs: prepare\n" +
+      "    runs-on: ubuntu-latest\n" +
+      "    environment: windows-release\n" +
+      "    steps:\n" +
+      '      - run: "true"\n',
+  );
   assert.match(
     named("windows-native"),
     /run: node scripts\/windows-native\.mjs dist-desktop\/native-windows\n/,
@@ -120,7 +141,11 @@ test("Windows signing jobs run no repository code", () => {
   );
   assert.match(
     named("sign-windows-exe"),
-    /\\signing\\novamira-hq-desktop\.exe\n/,
+    /\\signing\\novamira-hq-desktop\.exe\n.*\\signing\\Uninstall\.exe\n/,
+  );
+  assert.match(
+    named("windows-compile"),
+    /name: windows-exe-unsigned\n {10}path: \|\n {12}dist-desktop\/novamira-hq-desktop\.exe\n {12}dist-desktop\/Uninstall\.exe\n/,
   );
   assert.match(
     named("windows-package"),
@@ -167,7 +192,7 @@ test("Windows signing jobs run no repository code", () => {
   assert.match(windows, /TimeStamperCertificate/);
   assert.match(
     windows,
-    /foreach \(\$file in "dist-desktop\/native-windows\/webview\.dll", "dist-desktop\/novamira-hq-desktop\.exe", "dist-desktop\/\$env:ASSET"\)/,
+    /foreach \(\$file in "dist-desktop\/native-windows\/webview\.dll", "dist-desktop\/novamira-hq-desktop\.exe", "dist-desktop\/Uninstall\.exe", "dist-desktop\/\$env:ASSET"\)/,
   );
   // The publishing job waits for it and downloads what it uploads; nothing
   // unsigned matches the pattern it downloads.

@@ -95,8 +95,12 @@ test("uninstall keeps settings and credentials", () => {
   assert.ok(uninstall.includes('DeleteRegKey HKCU "${UNINSTALL_KEY}"'));
 });
 
-test("signing has one marked place and no site CLI is installed", () => {
-  assert.equal((script.match(/Code signing goes here/g) ?? []).length, 1);
+test("the installer ships a separately built uninstaller and no site CLI", () => {
+  // The release signs Uninstall.exe before packaging, so the installer copies
+  // it rather than writing an unsigned one.
+  assert.equal((script.match(/WriteUninstaller /g) ?? []).length, 1);
+  assert.ok(script.includes('WriteUninstaller "${UNINSTALLER}"'));
+  assert.ok(script.includes('File "${STAGE}\\Uninstall.exe"'));
   assert.doesNotMatch(script, /site-cli|File "[^"]*\\novamira-hq\.exe"/);
 });
 
@@ -135,7 +139,13 @@ test("--package builds the installer on Windows from the staged legal files", as
   assert.match(windows, /novamira-hq-setup-windows-x86_64\.exe/);
   for (const define of ["/DVERSION=", "/DSTAGE=", "/DOUTFILE="])
     assert.ok(windows.includes(define), define);
+  assert.ok(builder.includes("/DUNINSTALLER="));
+  assert.match(
+    builder,
+    /await compileDesktop\(\);\n  if \(platform === "win32"\) await writeWindowsUninstaller\(\);/,
+  );
   for (const name of [
+    "Uninstall.exe",
     "LICENSE",
     "SOURCE-OFFER.txt",
     "LGPL-2.1.txt",

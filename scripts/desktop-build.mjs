@@ -89,10 +89,10 @@ const icons = await generateIcons({
 });
 stdout.write(`Generated ${icons.length} desktop icons in ${iconDir}\n`);
 
-// `--reuse-compiled` packages the executable a previous run left in
-// `dist-desktop/` instead of compiling again. The Windows release signs that
-// executable between the two runs, and a recompile would replace the signed
-// file with an unsigned one.
+// `--reuse-compiled` packages the executable (and on Windows its uninstaller)
+// a previous run left in `dist-desktop/` instead of compiling again. The
+// Windows release signs both between the two runs, and a recompile would
+// replace the signed files with unsigned ones.
 const reuseCompiled = argv.includes("--reuse-compiled");
 if (reuseCompiled && !argv.includes("--package")) {
   fail("--reuse-compiled only applies together with --package");
@@ -112,6 +112,7 @@ const binary =
 
 if (!reuseCompiled) {
   await compileDesktop();
+  if (platform === "win32") await writeWindowsUninstaller();
 }
 
 if (argv.includes("--package")) {
@@ -230,8 +231,37 @@ async function packageLinux() {
 }
 
 /**
- * The Windows installer: the executable and the legal files it must travel
- * with, compiled by a pinned and verified makensis.
+ * The uninstaller the Windows installer ships, written beside the executable
+ * so the release signs both before packaging. NSIS only writes an uninstaller
+ * from a running installer, so this builds one that writes it and exits.
+ */
+async function writeWindowsUninstaller() {
+  const stage = join(outDir, "stage-uninstaller");
+  const uninstaller = join(outDir, "Uninstall.exe");
+  await rm(stage, { recursive: true, force: true });
+  await rm(uninstaller, { force: true });
+  await mkdir(stage, { recursive: true });
+  await cp(join(iconDir, "novamira-hq.ico"), join(stage, "novamira-hq.ico"));
+  await cp(join(root, "LICENSE"), join(stage, "LICENSE"));
+  const writer = join(stage, "write-uninstaller.exe");
+  const makensis = await installNsis(join(outDir, "nsis"));
+  run(makensis, [
+    `/DVERSION=${manifest.version}`,
+    `/DSTAGE=${stage}`,
+    `/DOUTFILE=${writer}`,
+    `/DUNINSTALLER=${uninstaller}`,
+    join(root, "scripts/windows/installer.nsi"),
+  ]);
+  run(writer, []);
+  await access(uninstaller).catch(() =>
+    fail(`${writer} did not write ${uninstaller}`),
+  );
+  await rm(stage, { recursive: true, force: true });
+}
+
+/**
+ * The Windows installer: the executable, its uninstaller and the legal files
+ * they must travel with, compiled by a pinned and verified makensis.
  */
 async function packageWindows() {
   const stage = join(outDir, "stage-windows");
@@ -239,6 +269,7 @@ async function packageWindows() {
   await rm(stage, { recursive: true, force: true });
   await mkdir(stage, { recursive: true });
   await cp(join(outDir, binary), join(stage, "novamira-hq-desktop.exe"));
+  await cp(join(outDir, "Uninstall.exe"), join(stage, "Uninstall.exe"));
   await cp(join(iconDir, "novamira-hq.ico"), join(stage, "novamira-hq.ico"));
   await cp(join(root, "LICENSE"), join(stage, "LICENSE"));
   await cp(
