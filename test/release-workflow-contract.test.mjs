@@ -8,6 +8,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 import { fileURLToPath, URL } from "node:url";
+import { releaseNotes } from "../scripts/release-notes.mjs";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 const workflow = await readFile(
@@ -357,6 +358,13 @@ test("Linux and Windows desktop assets carry their icons and are proved to run",
   // Every uploaded artifact matches what the publishing job downloads.
   const release = jobs.find((job) => job.startsWith("github-release:"));
   assert.match(release, /pattern: novamira-hq-desktop-\*-release\n/);
+  // The release notes are the version's CHANGELOG section.
+  assert.doesNotMatch(release, /generate-notes/);
+  assert.match(
+    release,
+    /node scripts\/release-notes\.mjs "\$\{RELEASE_TAG#v\}" > "\$RUNNER_TEMP\/notes\.md"\n/,
+  );
+  assert.equal(release.split('--notes-file "$RUNNER_TEMP/notes.md"').length, 3);
   assert.match(desktop, /name: \$\{\{ matrix\.artifact \}\}-release\n/);
   const artifacts = [...desktop.matchAll(/artifact: (\S+)\n/g)].map(
     (match) => match[1],
@@ -527,3 +535,28 @@ function runMetadataResult(...args) {
 function run(command, args, cwd) {
   return spawnSync(command, args, { cwd, encoding: "utf8" });
 }
+
+test("release notes are the version's CHANGELOG section, unwrapped", () => {
+  const changelog = [
+    "# Changelog",
+    "",
+    "## 1.0.0-beta8 - 2026-10-20",
+    "",
+    "### Changed",
+    "",
+    "- One entry wrapped",
+    "  over two lines.",
+    "",
+    "## 1.0.0-beta7 - 2026-10-19",
+    "",
+    "- Older.",
+    "",
+  ].join("\n");
+  assert.equal(
+    releaseNotes(changelog, "1.0.0-beta8"),
+    "### Changed\n\n- One entry wrapped over two lines.\n",
+  );
+  assert.equal(releaseNotes(changelog, "1.0.0-beta7"), "- Older.\n");
+  assert.equal(releaseNotes(changelog, "1.0.0-beta"), undefined);
+  assert.equal(releaseNotes(changelog, "1.0.0"), undefined);
+});
