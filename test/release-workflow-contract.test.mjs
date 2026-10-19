@@ -131,7 +131,17 @@ test("Windows signing jobs run no repository code", () => {
     /\\signing\\novamira-hq-setup-windows-x86_64\.exe\n/,
   );
 
+  assert.match(named("windows-compile"), /name: windows-acceptance\n/);
+  assert.match(
+    named("windows-compile"),
+    /dist-desktop\/spawn-acceptance\.exe\n/,
+  );
+  assert.match(
+    named("windows-compile"),
+    /dist-desktop\/registrar-acceptance\.exe\n/,
+  );
   const windows = named("desktop-windows");
+  assert.match(windows, /name: windows-acceptance\n/);
   assert.doesNotMatch(windows, /id-token|secrets\.|environment:/);
   assert.match(
     windows,
@@ -257,7 +267,13 @@ test("macOS builds, signs and verifies in separate jobs", () => {
   assert.match(sign, /name: \$\{\{ matrix\.asset \}\}-unsigned\n/);
   assert.match(sign, /name: \$\{\{ matrix\.asset \}\}-signed\n/);
 
+  // The smoke test runs the acceptance executables the build compiled.
+  assert.match(build, /name: \$\{\{ matrix\.asset \}\}-acceptance\n/);
+  assert.match(build, /dist-desktop\/spawn-acceptance\n/);
+  assert.match(build, /dist-desktop\/registrar-acceptance\n/);
+  assert.doesNotMatch(sign, /-acceptance\n/);
   const verify = named("desktop-macos");
+  assert.match(verify, /name: \$\{\{ matrix\.asset \}\}-acceptance\n/);
   assert.match(verify, /needs: \[prepare, sign-macos\]/);
   assert.match(verify, /name: \$\{\{ matrix\.asset \}\}-signed\n/);
   assert.match(verify, /\$ASSET\.app\.zip/);

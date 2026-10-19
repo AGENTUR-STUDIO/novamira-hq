@@ -63,6 +63,14 @@ jobs:
             dist/web/static/third-party-notices.txt
           retention-days: 1
           if-no-files-found: error
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ${{ matrix.asset }}-acceptance
+          path: |
+            dist-desktop/spawn-acceptance
+            dist-desktop/registrar-acceptance
+          retention-days: 1
+          if-no-files-found: error
 
   sign:
     needs: build
@@ -161,7 +169,11 @@ jobs:
         with:
           name: ${{ matrix.asset }}-signed
           path: dist-desktop
-      - run: chmod +x "dist-desktop/$ASSET"
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: ${{ matrix.asset }}-acceptance
+          path: dist-desktop
+      - run: chmod +x "dist-desktop/$ASSET" dist-desktop/spawn-acceptance dist-desktop/registrar-acceptance
       - name: Report the code signature
         run: |
           codesign --display --verbose=4 "dist-desktop/$ASSET"
