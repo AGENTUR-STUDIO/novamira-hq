@@ -281,6 +281,7 @@ async function provisionNovamiraSteps(
   if (
     client.provider === "hostinger" ||
     client.provider === "cloudways" ||
+    client.provider === "sandywp" ||
     client.provider === "plesk" ||
     client.provider === "cpanel" ||
     client.provider === "whm"

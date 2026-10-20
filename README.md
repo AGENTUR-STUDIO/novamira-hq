@@ -19,8 +19,18 @@ and make your sites available to compatible AI agents through one connection.
 - Save, review, and run content pushes between supported environments.
 - Connect an MCP-compatible AI client once and use it across your sites.
 
-Novamira HQ currently supports Kinsta, InstaWP, Pantheon, Pressable, WP Engine,
+Novamira HQ currently supports Kinsta, InstaWP, SandyWP, Pantheon, Pressable, WP Engine,
 Rocket.net, Hostinger, Cloudways, Plesk, xCloud, cPanel, and WHM. Available operations vary by provider.
+SandyWP accounts connect with a SandyWP API key, created from the account menu
+in the SandyWP dashboard. HQ lists your sandboxes with their status and expiry
+and creates new ones from the CLI; a new sandbox is provisioned in the
+background, so wait for it with `hosting ops wait`. The workspace is optional:
+leave it blank to use your personal workspace. HQ never shows or stores a
+sandbox's admin password or one-click login link. Novamira setup uploads the
+official plugin to a ready sandbox and activates it, and never overwrites an
+existing Novamira folder. HQ does not turn on Novamira's AI Abilities there, on
+any plan, so enable them in WordPress before connecting. SandyWP's API cannot run
+WP-CLI, manage backups or change PHP, so those actions are not available.
 Plesk accounts can list hosted domains. An active WP Toolkit adds WordPress
 installation discovery, Novamira setup, WordPress backup and restore, and
 directional copying between two selected WordPress installations. Plesk copying

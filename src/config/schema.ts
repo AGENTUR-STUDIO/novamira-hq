@@ -14,6 +14,7 @@ export const CONFIG_FORMAT_VERSION = 1;
 export const PROVIDER_KINDS = [
   "kinsta",
   "instawp",
+  "sandywp",
   "pantheon",
   "pressable",
   "wpengine",
@@ -42,6 +43,8 @@ export const DEFAULT_KINSTA_API_BASE_URL = "https://api.kinsta.com/v2";
 export const DEFAULT_KINSTA_CREDENTIAL_ENV = "KINSTA_API_KEY";
 export const DEFAULT_INSTAWP_API_BASE_URL = "https://app.instawp.io/api/v2";
 export const DEFAULT_INSTAWP_CREDENTIAL_ENV = "INSTAWP_API_KEY";
+export const DEFAULT_SANDYWP_API_BASE_URL = "https://app.sandywp.com";
+export const DEFAULT_SANDYWP_CREDENTIAL_ENV = "SANDYWP_API_KEY";
 export const DEFAULT_PRESSABLE_API_BASE_URL = "https://my.pressable.com/v1";
 export const DEFAULT_PRESSABLE_CREDENTIAL_ENV = "PRESSABLE_CLIENT_SECRET";
 export const DEFAULT_PRESSABLE_CLIENT_ID_ENV = "PRESSABLE_CLIENT_ID";
@@ -101,6 +104,10 @@ export const PROVIDER_DEFAULTS: Readonly<
   instawp: {
     apiBaseUrl: DEFAULT_INSTAWP_API_BASE_URL,
     credentialEnv: DEFAULT_INSTAWP_CREDENTIAL_ENV,
+  },
+  sandywp: {
+    apiBaseUrl: DEFAULT_SANDYWP_API_BASE_URL,
+    credentialEnv: DEFAULT_SANDYWP_CREDENTIAL_ENV,
   },
   pantheon: {
     apiBaseUrl: DEFAULT_PANTHEON_API_BASE_URL,

@@ -251,7 +251,9 @@ export function createHostingConfigHandlers(
    * Go's `applyCompanySelection`. `auto` validates the credential against the
    * provider and adopts the account scope it reports; InstaWP and Pressable
    * have no such scope, so their profiles keep none even though the credential
-   * is still validated. WHM is validated for every selection, so a token that
+   * is still validated. SandyWP reports its active workspace, but the profile
+   * keeps none unless one is named: without it SandyWP acts in the personal
+   * workspace, and a stored one would be sent on every request. WHM is validated for every selection, so a token that
    * WHM refuses is never saved.
    */
   const resolveCompany = async (
@@ -288,7 +290,12 @@ export function createHostingConfigHandlers(
     const validation = await client.validate();
     if (none) return undefined;
     if (explicit) return requested;
-    if (provider === "instawp" || provider === "pressable") return undefined;
+    if (
+      provider === "instawp" ||
+      provider === "pressable" ||
+      provider === "sandywp"
+    )
+      return undefined;
     return validation.companyId ?? undefined;
   };
 

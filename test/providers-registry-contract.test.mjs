@@ -68,12 +68,12 @@ async function isolatedStore() {
 test("the registry covers every provider kind exactly once", () => {
   const keys = Object.keys(PROVIDER_REGISTRY);
   assert.deepEqual([...keys].sort(), [...PROVIDER_KINDS].sort());
-  assert.equal(keys.length, 12);
+  assert.equal(keys.length, 13);
   assert.equal(new Set(keys).size, keys.length);
 
   // Distinct constructors: a copy-paste in the map would alias two providers.
   const factories = Object.values(PROVIDER_REGISTRY);
-  assert.equal(new Set(factories).size, 12);
+  assert.equal(new Set(factories).size, 13);
   for (const kind of PROVIDER_KINDS) {
     assert.equal(
       typeof PROVIDER_REGISTRY[kind],
@@ -83,7 +83,7 @@ test("the registry covers every provider kind exactly once", () => {
   }
 });
 
-test("registeredProviders reports all twelve in taxonomy order", () => {
+test("registeredProviders reports every provider in taxonomy order", () => {
   assert.deepEqual(registeredProviders(PROVIDER_REGISTRY), [...PROVIDER_KINDS]);
 });
 
@@ -314,6 +314,7 @@ test("NOVAMIRA_SETUP_PROVIDERS supports observable WP-CLI or bounded provider AP
     const eligible =
       kind === "hostinger" ||
       kind === "cloudways" ||
+      kind === "sandywp" ||
       kind === "plesk" ||
       kind === "cpanel" ||
       kind === "whm" ||
@@ -332,6 +333,7 @@ test("NOVAMIRA_SETUP_PROVIDERS supports observable WP-CLI or bounded provider AP
     "kinsta",
     "plesk",
     "rocketnet",
+    "sandywp",
     "whm",
   ]);
   // The labels are what a disabled "Setup Novamira" button names, so they must

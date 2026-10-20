@@ -183,6 +183,7 @@ export function isCacheKind(value: unknown): value is CacheKind {
 export const PROVIDER_LABELS: Readonly<Record<ProviderKind, string>> = {
   kinsta: "Kinsta",
   instawp: "InstaWP",
+  sandywp: "SandyWP",
   pantheon: "Pantheon",
   pressable: "Pressable",
   wpengine: "WP Engine",
@@ -243,7 +244,8 @@ export const ENVIRONMENT_PUSH_PROVIDERS: ReadonlySet<ProviderKind> =
  * (`src/provisioning/setup.ts`) because a plugin install whose result cannot be
  * observed cannot be verified. Go arrived at the same three names by hard-coding
  * them. Hostinger uses a bounded API ZIP setup and activation receipt;
- * Cloudways uses WP Manager ZIP upload and verified plugin inventory.
+ * Cloudways uses WP Manager ZIP upload and verified plugin inventory; SandyWP
+ * uploads the ZIP through its plugin deploy job and checks its plugin folder.
  */
 export const NOVAMIRA_SETUP_PROVIDERS: ReadonlySet<ProviderKind> =
   Object.freeze(
@@ -253,6 +255,7 @@ export const NOVAMIRA_SETUP_PROVIDERS: ReadonlySet<ProviderKind> =
       "rocketnet",
       "hostinger",
       "cloudways",
+      "sandywp",
       "plesk",
       "cpanel",
       "whm",
@@ -266,6 +269,7 @@ export const NOVAMIRA_SETUP_PROVIDER_LABELS: readonly string[] = Object.freeze([
   "Rocket.net",
   "Hostinger",
   "Cloudways",
+  "SandyWP",
   "Plesk",
   "cPanel",
   "WHM",

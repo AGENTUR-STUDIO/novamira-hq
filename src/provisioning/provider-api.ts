@@ -22,19 +22,29 @@ export async function provisionProviderApi(
   request: NovamiraSetupRequest,
 ): Promise<NovamiraSetupResult> {
   const cloudways = dependencies.client.provider === "cloudways";
+  const sandywp = dependencies.client.provider === "sandywp";
+  // Providers whose API installs the plugin but cannot change its settings.
+  const settingsReadOnly = cloudways || sandywp;
   const plesk = dependencies.client.provider === "plesk";
   // WHM sets up the same cPanel accounts, so the cPanel rules apply to both.
   const cpanel = cpanelFamily(dependencies.client.provider);
   const whm = dependencies.client.provider === "whm";
   const label = cloudways
     ? "Cloudways"
-    : plesk
-      ? "Plesk"
-      : whm
-        ? "WHM"
-        : cpanel
-          ? "cPanel"
-          : "Hostinger";
+    : sandywp
+      ? "SandyWP"
+      : plesk
+        ? "Plesk"
+        : whm
+          ? "WHM"
+          : cpanel
+            ? "cPanel"
+            : "Hostinger";
+  // SandyWP can set options on paid plans, but HQ deliberately does not use it,
+  // so the same manual step applies on every plan.
+  const settingsNote = sandywp
+    ? "HQ does not change these settings on SandyWP."
+    : `${label} API cannot change these settings.`;
   if (
     request.force ||
     request.activate === false ||
@@ -56,13 +66,15 @@ export async function provisionProviderApi(
     "info",
     cloudways
       ? "Installing and activating Novamira through Cloudways WP Manager. Existing installations are never overwritten. AI Abilities settings cannot be changed through this API; readiness will be checked afterwards."
-      : plesk
-        ? "Installing Novamira through Plesk WP Toolkit on the selected WordPress installation. Existing installations are never overwritten."
-        : whm
-          ? "Installing Novamira through WHM on the selected cPanel account. Existing installations are never overwritten."
-          : cpanel
-            ? "Installing Novamira through cPanel. Existing installations are never overwritten."
-            : "Preparing Novamira through Hostinger: verified ZIP upload and temporary installer. Existing installations are never overwritten.",
+      : sandywp
+        ? "Installing and activating Novamira through the SandyWP plugin deploy. Existing installations are never overwritten. AI Abilities settings cannot be changed through this API; readiness will be checked afterwards."
+        : plesk
+          ? "Installing Novamira through Plesk WP Toolkit on the selected WordPress installation. Existing installations are never overwritten."
+          : whm
+            ? "Installing Novamira through WHM on the selected cPanel account. Existing installations are never overwritten."
+            : cpanel
+              ? "Installing Novamira through cPanel. Existing installations are never overwritten."
+              : "Preparing Novamira through Hostinger: verified ZIP upload and temporary installer. Existing installations are never overwritten.",
   );
   const action = await dependencies.client.action({
     kind: "setup-novamira",
@@ -133,8 +145,8 @@ export async function provisionProviderApi(
     } catch (error) {
       throw new CliError(
         "server_unsupported",
-        cloudways
-          ? "Novamira is installed and active, but the site is not ready to connect. Open Novamira settings in WordPress, enable AI Abilities for this domain, then reconnect. If already enabled, check plugin compatibility and the site cache. Cloudways API cannot change these settings."
+        settingsReadOnly
+          ? `Novamira is installed and active, but the site is not ready to connect. Open Novamira settings in WordPress, enable AI Abilities for this domain, then reconnect. If already enabled, check plugin compatibility and the site cache. ${settingsNote}`
           : plesk || cpanel
             ? "Novamira is active, but public OAuth readiness could not be verified. Check AI Abilities settings and the site cache before reconnecting."
             : "Novamira is active, but public OAuth readiness could not be verified. If LiteSpeed is serving an old 404, purge its cache and retry verification. Setup is not a completed site connection.",
@@ -157,8 +169,8 @@ export async function provisionProviderApi(
     if (raw.aiEnabled === null)
       warnings.push({
         code: "ai_abilities_not_checked",
-        message: cloudways
-          ? "Cloudways cannot enable AI Abilities through its API. Enable them in Novamira settings in WordPress before connecting; readiness has not been verified."
+        message: settingsReadOnly
+          ? `${sandywp ? "HQ does not enable AI Abilities on SandyWP." : "Cloudways cannot enable AI Abilities through its API."} Enable them in Novamira settings in WordPress before connecting; readiness has not been verified.`
           : "Existing AI Abilities settings were preserved and could not be verified through provider inventory.",
       });
   }

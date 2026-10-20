@@ -456,6 +456,17 @@ test("2a: the panel URL placeholder and help follow the selected provider", asyn
   assert.ok(!markup.includes(">Enter the HTTPS panel URL."));
 });
 
+test("2d: the account form tells SandyWP users where the key and the workspace come from", async () => {
+  const { server } = await fixture({ config: PROFILE_CONFIG });
+  const markup = await page(server, "/hosting-accounts");
+  for (const want of [
+    "SandyWP workspace",
+    "Paste a SandyWP API key",
+    "personal workspace",
+  ])
+    assert.ok(markup.includes(want), want);
+});
+
 test("2c: the panel URL field is shown for Plesk, cPanel and WHM only", async () => {
   const { server } = await fixture({ config: PROFILE_CONFIG });
   const markup = await page(server, "/hosting-accounts");
@@ -485,6 +496,7 @@ test("2b: provider choices can be shuffled without favoring the catalog order", 
     "plesk",
     "pressable",
     "rocketnet",
+    "sandywp",
     "whm",
     "wpengine",
     "xcloud",

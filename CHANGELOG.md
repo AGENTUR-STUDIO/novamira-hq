@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Added
+
+- SandyWP can now be connected with an API key. HQ lists your sandboxes with
+  their status and expiry and can create new ones from the command line. It
+  never shows or stores a sandbox's admin password or login link.
+- Novamira setup now works on SandyWP sandboxes. It uploads the official plugin
+  to a ready sandbox and activates it, and it never overwrites a Novamira
+  folder that is already there. HQ does not turn on AI Abilities on SandyWP, so
+  enable them in the Novamira settings in WordPress before connecting.
+
 ### Fixed
 
 - Rocket.net sites that have a staging site now show both in Sites: the

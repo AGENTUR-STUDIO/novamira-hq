@@ -28,6 +28,7 @@ import { createPantheonClient } from "./pantheon.js";
 import { createPressableClient } from "./pressable.js";
 import { createPleskClient } from "./plesk.js";
 import { createRocketNetClient } from "./rocketnet.js";
+import { createSandyWpClient } from "./sandywp.js";
 import { createWhmClient } from "./whm.js";
 import { createWpEngineClient } from "./wpengine.js";
 import { createXCloudClient } from "./xcloud.js";
@@ -41,6 +42,7 @@ export const PROVIDER_REGISTRY: Readonly<
 > = {
   kinsta: createKinstaClient,
   instawp: createInstaWpClient,
+  sandywp: createSandyWpClient,
   pantheon: createPantheonClient,
   pressable: createPressableClient,
   wpengine: createWpEngineClient,
@@ -63,6 +65,7 @@ export {
   createPressableClient,
   createPleskClient,
   createRocketNetClient,
+  createSandyWpClient,
   createWhmClient,
   createWpEngineClient,
   createXCloudClient,

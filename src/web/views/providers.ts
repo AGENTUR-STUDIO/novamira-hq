@@ -131,6 +131,13 @@ const PROVIDER_FORM_META: JsonValue = {
     credentialHelp:
       "Paste an InstaWP API key. Find it under Profile → Account → API Token → Add New.",
   },
+  sandywp: {
+    companyLabel: "SandyWP workspace",
+    companyPlaceholder: "Personal workspace",
+    companyHelp: "Optional. Leave blank to use your personal workspace.",
+    credentialHelp:
+      "Paste a SandyWP API key. Create it from the account menu → API keys in the SandyWP dashboard.",
+  },
   pantheon: {
     companyLabel: "Pantheon user ID",
     companyPlaceholder: "Detected from machine token",

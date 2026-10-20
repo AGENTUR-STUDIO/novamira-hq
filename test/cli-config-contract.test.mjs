@@ -426,8 +426,8 @@ test("config add --company auto validates and adopts the reported company", asyn
   });
 });
 
-test("config add --company auto keeps no company for InstaWP and Pressable", async () => {
-  for (const provider of ["instawp", "pressable"]) {
+test("config add --company auto keeps no company for InstaWP, Pressable and SandyWP", async () => {
+  for (const provider of ["instawp", "pressable", "sandywp"]) {
     await isolated(async (cli) => {
       const { body } = await cli.envelope(["config", "add", provider]);
       assert.equal(body.data.companyId, null);
@@ -587,6 +587,7 @@ test("config add rejects an unknown provider with usage_error and the allowed se
     assert.deepEqual(body.error.details.allowed, [
       "kinsta",
       "instawp",
+      "sandywp",
       "pantheon",
       "pressable",
       "wpengine",

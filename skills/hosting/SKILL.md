@@ -6,7 +6,7 @@ allowed-tools: Bash(novamira-hq:*)
 
 # Novamira HQ Hosting
 
-Use `novamira-hq hosting ...` for provider-neutral WordPress hosting operations. Kinsta, InstaWP, Pantheon, Pressable, WP Engine, Rocket.net, Hostinger, Cloudways, Plesk, xCloud, cPanel, and WHM are implemented, but agents should use the generic hosting command names and inspect provider capabilities before reaching for a provider-specific workflow.
+Use `novamira-hq hosting ...` for provider-neutral WordPress hosting operations. Kinsta, InstaWP, SandyWP, Pantheon, Pressable, WP Engine, Rocket.net, Hostinger, Cloudways, Plesk, xCloud, cPanel, and WHM are implemented, but agents should use the generic hosting command names and inspect provider capabilities before reaching for a provider-specific workflow.
 
 Always use `--json` for automation. Every hosting operation requires an explicit global `--profile`; there is no default and no single-profile fallback.
 
@@ -40,6 +40,8 @@ Rocket.net exposes each site as one synthetic environment. The Rocket.net userna
 Hostinger exposes websites as sites. Use `HOSTINGER_API_TOKEN` for authentication; the profile `company_id` can store the hosting account username for endpoints that require one. Hostinger website environments use `username:domain` when both values are needed. Prefer `--from-json` for Hostinger-native website and WordPress installation payloads.
 
 Cloudways exposes applications as sites with one synthetic environment per application. Use a current Access Token in `CLOUDWAYS_ACCESS_TOKEN`; create it from the Cloudways profile menu under **API Integration → Create Access Token**. No account email is required. Cloudways environment IDs use `server_id:app_id` when both values are needed. Prefer `--from-json` with Cloudways-native form field names for create, clone, domains, backups, cache, and service operations.
+
+SandyWP exposes each sandbox as a site with one synthetic environment named `site`. Use a SandyWP API key in `SANDYWP_API_KEY`; create it from the account menu under **API keys** in the SandyWP dashboard. The workspace (`company_id`) is optional and may be its slug or id; leave it blank for the personal workspace. A new sandbox is created in the background, so wait for it with `hosting ops wait`. Novamira setup uploads the official plugin and activates it but does not enable AI Abilities on any plan, so ask the user to enable them in WordPress before connecting.
 
 Provisioning and maintenance operations return normalized action results. If `operation_id` is present, poll it with:
 
