@@ -1,7 +1,7 @@
 {
   "reviewedAt": "2026-10-20",
   "scope": "All npm lock entries, including development tools; not a binary SBOM. License identifiers are declarations from installed package manifests.",
-  "lockSha256": "b1725dcd7ca9a2f7ba5e80b0ff51b5d4140c6cf42722f5d3c3e1a9cb59483caa",
+  "lockSha256": "218b965d66ad9b39b065e7915ee152027d815f21bc75715eb55572b7852a1c15",
   "packages": [
     {
       "name": "@novamira/cli",
@@ -35,7 +35,7 @@
     },
     {
       "name": "@eslint/eslintrc",
-      "version": "3.3.6",
+      "version": "3.3.7",
       "license": "MIT"
     },
     {
@@ -95,62 +95,62 @@
     },
     {
       "name": "@types/node",
-      "version": "24.13.3",
+      "version": "24.19.2",
       "license": "MIT"
     },
     {
       "name": "@typescript-eslint/eslint-plugin",
-      "version": "8.65.0",
+      "version": "8.71.2",
       "license": "MIT"
     },
     {
       "name": "@typescript-eslint/parser",
-      "version": "8.65.0",
+      "version": "8.71.2",
       "license": "MIT"
     },
     {
       "name": "@typescript-eslint/project-service",
-      "version": "8.65.0",
+      "version": "8.71.2",
       "license": "MIT"
     },
     {
       "name": "@typescript-eslint/scope-manager",
-      "version": "8.65.0",
+      "version": "8.71.2",
       "license": "MIT"
     },
     {
       "name": "@typescript-eslint/tsconfig-utils",
-      "version": "8.65.0",
+      "version": "8.71.2",
       "license": "MIT"
     },
     {
       "name": "@typescript-eslint/type-utils",
-      "version": "8.65.0",
+      "version": "8.71.2",
       "license": "MIT"
     },
     {
       "name": "@typescript-eslint/types",
-      "version": "8.65.0",
+      "version": "8.71.2",
       "license": "MIT"
     },
     {
       "name": "@typescript-eslint/typescript-estree",
-      "version": "8.65.0",
+      "version": "8.71.2",
       "license": "MIT"
     },
     {
       "name": "@typescript-eslint/utils",
-      "version": "8.65.0",
+      "version": "8.71.2",
       "license": "MIT"
     },
     {
       "name": "@typescript-eslint/visitor-keys",
-      "version": "8.65.0",
+      "version": "8.71.2",
       "license": "MIT"
     },
     {
       "name": "acorn",
-      "version": "8.18.0",
+      "version": "8.19.0",
       "license": "MIT"
     },
     {
@@ -180,7 +180,7 @@
     },
     {
       "name": "brace-expansion",
-      "version": "1.1.17",
+      "version": "1.1.21",
       "license": "MIT"
     },
     {
@@ -310,7 +310,7 @@
     },
     {
       "name": "flatted",
-      "version": "3.4.3",
+      "version": "3.4.4",
       "license": "ISC"
     },
     {
@@ -360,7 +360,7 @@
     },
     {
       "name": "js-yaml",
-      "version": "4.3.0",
+      "version": "4.3.2",
       "license": "MIT"
     },
     {
@@ -445,7 +445,7 @@
     },
     {
       "name": "picomatch",
-      "version": "4.0.5",
+      "version": "4.0.7",
       "license": "MIT"
     },
     {
@@ -455,7 +455,7 @@
     },
     {
       "name": "prettier",
-      "version": "3.9.6",
+      "version": "3.9.10",
       "license": "MIT"
     },
     {
@@ -515,12 +515,12 @@
     },
     {
       "name": "typescript-eslint",
-      "version": "8.65.0",
+      "version": "8.71.2",
       "license": "MIT"
     },
     {
       "name": "undici-types",
-      "version": "7.18.2",
+      "version": "7.24.6",
       "license": "MIT"
     },
     {
@@ -550,7 +550,7 @@
     },
     {
       "name": "ignore",
-      "version": "7.0.6",
+      "version": "7.0.12",
       "license": "MIT"
     },
     {
@@ -565,7 +565,7 @@
     },
     {
       "name": "brace-expansion",
-      "version": "5.0.8",
+      "version": "5.0.12",
       "license": "MIT"
     },
     {
