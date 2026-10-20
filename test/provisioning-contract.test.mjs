@@ -1038,7 +1038,7 @@ test("exactly one authorization server, and it must be the site itself", async (
   }
 });
 
-test("bearer-header authentication and the mcp scope must be advertised", async () => {
+test("bearer-header authentication and a full-access scope must be advertised", async () => {
   // 56 and 57.
   const bearer = await documentFails(
     { bearer_methods_supported: ["body"] },
@@ -1053,7 +1053,14 @@ test("bearer-header authentication and the mcp scope must be advertised", async 
     "scopes",
   );
   assert.equal(scopes.details.check, "metadata.scopes");
-  assert.match(scopes.message, /"mcp"/);
+  assert.match(scopes.message, /"full_access" or "mcp"/);
+});
+
+test("the full_access scope name of Novamira 1.12.10 is accepted", async () => {
+  const http = serving(
+    protectedResourceDocument(SITE_URL, { scopes_supported: ["full_access"] }),
+  );
+  assert.deepEqual(await check(http), compatibilityBlock());
 });
 
 test("a document with no novamira block names the pre-1.11.1 case", async () => {

@@ -473,10 +473,16 @@ function assertBearerMethods(
 
 function assertScopes(value: unknown, context: CompatibilityContext): void {
   const scopes = stringArray(value);
-  if (scopes?.includes("mcp") === true) return;
+  // Novamira 1.12.10 advertises the full-access grant as `full_access`;
+  // earlier builds advertise `mcp`. The site CLI requests whichever is listed.
+  if (
+    scopes?.includes("full_access") === true ||
+    scopes?.includes("mcp") === true
+  )
+    return;
   throw unsupported(
     "metadata.scopes",
-    'This Novamira build does not advertise the full-access "mcp" OAuth scope, which novamira auth login always requests. Reinstall with --source novamira-latest --force.',
+    'This Novamira build does not advertise the full-access OAuth scope ("full_access" or "mcp"), which novamira auth login always requests. Reinstall with --source novamira-latest --force.',
     context,
   );
 }
