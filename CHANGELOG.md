@@ -5,12 +5,11 @@
 ### Added
 
 - SandyWP can now be connected with an API key. HQ lists your sandboxes with
-  their status and expiry and can create new ones from the command line. It
-  never shows or stores a sandbox's admin password or login link.
-- Novamira setup now works on SandyWP sandboxes. It uploads the official plugin
-  to a ready sandbox and activates it, and it never overwrites a Novamira
-  folder that is already there. HQ does not turn on AI Abilities on SandyWP, so
-  enable them in the Novamira settings in WordPress before connecting.
+  their status and expiry, can create new ones from the command line, and can
+  set up Novamira on a ready sandbox by uploading and activating the official
+  plugin, never overwriting a Novamira folder that is already there. HQ cannot
+  turn on AI Abilities on SandyWP, so enable them manually in the Novamira
+  settings in WordPress before connecting.
 
 ### Fixed
 
@@ -18,6 +17,13 @@
   production site is listed as live and its staging site appears beside it.
   Before, HQ listed a production site as staging and left its real staging
   site out.
+
+### Tweak
+
+- Sites running Novamira 1.12.10 and newer, which name the full-access OAuth
+  scope `full_access` instead of `mcp`, can be set up and connected again.
+  Novamira setup accepts them, and the bundled Novamira CLI is updated to
+  1.3.6 so login and existing connections keep working.
 
 ## 1.0.0-beta7 - 2026-10-19
 
