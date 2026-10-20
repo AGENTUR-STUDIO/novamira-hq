@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.0.0-beta8 - 2026-10-20
 
 ### Added
 
@@ -11,19 +11,19 @@
   turn on AI Abilities on SandyWP, so enable them manually in the Novamira
   settings in WordPress before connecting.
 
-### Fixed
-
-- Rocket.net sites that have a staging site now show both in Sites: the
-  production site is listed as live and its staging site appears beside it.
-  Before, HQ listed a production site as staging and left its real staging
-  site out.
-
 ### Tweak
 
 - Sites running Novamira 1.12.10 and newer, which name the full-access OAuth
   scope `full_access` instead of `mcp`, can be set up and connected again.
   Novamira setup accepts them, and the bundled Novamira CLI is updated to
   1.3.6 so login and existing connections keep working.
+
+### Fixed
+
+- Rocket.net sites that have a staging site now show both in Sites: the
+  production site is listed as live and its staging site appears beside it.
+  Before, HQ listed a production site as staging and left its real staging
+  site out.
 
 ## 1.0.0-beta7 - 2026-10-19
 
