@@ -13,8 +13,10 @@
  * revealed exactly once per token exchange, inside `login()`.
  *
  * Rocket.net has no environment concept: a site *is* its environment, so every
- * site is normalized into exactly one synthetic `HostingEnvironment` whose id is
- * the site id. Several provider-neutral requests therefore have no Rocket.net
+ * site is normalized into one synthetic `HostingEnvironment` whose id is the
+ * site id. A staging site is a site of its own, which its production site points
+ * at with `staging.staging_id`; it becomes the production site's second
+ * environment. Several provider-neutral requests therefore have no Rocket.net
  * equivalent; each one gets an explicit `case` that reports
  * `provider_unsupported` rather than falling through to `assertNever`.
  *
@@ -77,7 +79,8 @@ const SITES_PAGE_SIZE = 100;
  * layer drives rather than the request unions.
  */
 const CAPABILITIES: readonly ProviderCapabilityInput[] = (() => {
-  const singleEnv = "Rocket.net sites are exposed as one synthetic environment";
+  const singleEnv =
+    "Rocket.net sites are exposed as one environment, plus their staging site when they have one";
   const notMapped = "not mapped for Rocket.net in Novamira";
   const unsupported =
     "not supported by Rocket.net's provider-neutral Novamira mapping";
@@ -304,11 +307,38 @@ export const createRocketNetClient: ProviderClientFactory = (context) => {
     };
   }
 
-  async function getSite(siteId: string): Promise<HostingSite> {
+  async function getSiteResult(siteId: string): Promise<unknown> {
     const path = `/v1/sites/${escapePath(siteId)}`;
     const envelope = await getEnvelope(path);
     requireSuccess(envelope, path);
-    return siteFromPayload(envelope.result, true);
+    return envelope.result;
+  }
+
+  /**
+   * A production site points at its staging site, which is a site of its own.
+   * Expose it as the production site's second environment, read by its id.
+   *
+   * Deviation: the earlier mapping never read this pointer and named `live`
+   * only sites whose `production` was empty or `0`, so a production site
+   * (`production: 1`) was reported as `staging` and its staging site was lost.
+   */
+  async function withStaging(
+    site: HostingSite,
+    payload: unknown,
+  ): Promise<HostingSite> {
+    const stagingId = stagingIdOf(payload);
+    if (stagingId === undefined || site.environments === undefined) return site;
+    const staging = siteFromPayload(await getSiteResult(stagingId), true);
+    const environments = (staging.environments ?? []).map((environment) => ({
+      ...environment,
+      name: "staging",
+    }));
+    return { ...site, environments: [...site.environments, ...environments] };
+  }
+
+  async function getSite(siteId: string): Promise<HostingSite> {
+    const payload = await getSiteResult(siteId);
+    return withStaging(siteFromPayload(payload, true), payload);
   }
 
   const client: ProviderClient = {
@@ -353,8 +383,12 @@ export const createRocketNetClient: ProviderClientFactory = (context) => {
         const result = Array.isArray(envelope.result)
           ? (envelope.result as unknown[])
           : [];
-        for (const entry of result)
-          sites.push(siteFromPayload(entry, includeEnvironments));
+        for (const entry of result) {
+          const site = siteFromPayload(entry, includeEnvironments);
+          sites.push(
+            includeEnvironments ? await withStaging(site, entry) : site,
+          );
+        }
         const metadata = isRecord(envelope.metadata)
           ? envelope.metadata
           : undefined;
@@ -672,8 +706,26 @@ function normalizeStatus(status: string): string {
   }
 }
 
+/**
+ * `production` is `1` on a production site and, on a staging site, the id of
+ * the production site it belongs to.
+ */
 function environmentName(production: string): string {
-  return production !== "" && production !== "0" ? "staging" : "live";
+  return production === "" || production === "0" || production === "1"
+    ? "live"
+    : "staging";
+}
+
+/** The id of a production site's staging site, unless it is being deleted. */
+function stagingIdOf(value: unknown): string | undefined {
+  const staging =
+    isRecord(value) && isRecord(value.staging) ? value.staging : undefined;
+  if (staging === undefined) return undefined;
+  const id = flexString(staging.staging_id);
+  if (id === "" || id === "0") return undefined;
+  if (stringValue(staging.staging_status).toLowerCase() === "deleting")
+    return undefined;
+  return id;
 }
 
 function wordpressVersionOf(

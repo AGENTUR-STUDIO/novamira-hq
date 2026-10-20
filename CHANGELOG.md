@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- Rocket.net sites that have a staging site now show both in Sites: the
+  production site is listed as live and its staging site appears beside it.
+  Before, HQ listed a production site as staging and left its real staging
+  site out.
+
 ## 1.0.0-beta7 - 2026-10-19
 
 ### Added

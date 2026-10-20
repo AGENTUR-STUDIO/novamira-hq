@@ -337,7 +337,7 @@ test("rocketnet get site synthesizes one environment", async () => {
   );
 });
 
-test("rocketnet list environments returns the synthetic environment", async () => {
+test("rocketnet names a production site live although its production flag is 1", async () => {
   await withRocketNet(
     [
       {
@@ -348,7 +348,114 @@ test("rocketnet list environments returns the synthetic environment", async () =
     async (client) => {
       const environments = await client.listEnvironments("123");
       assert.equal(environments.length, 1);
+      assert.equal(environments[0].name, "live");
+    },
+  );
+});
+
+test("rocketnet names a site staging when production holds its parent site id", async () => {
+  await withRocketNet(
+    [
+      {
+        expected: "GET /v1/sites/352157",
+        body: '{"success":true,"result":{"id":352157,"domain":"example-staging.onrocket.site","production":285279,"status":"active"}}',
+      },
+    ],
+    async (client) => {
+      const environments = await client.listEnvironments("352157");
+      assert.equal(environments.length, 1);
+      assert.equal(environments[0].id, "352157");
       assert.equal(environments[0].name, "staging");
+    },
+  );
+});
+
+test("rocketnet lists a staging site as a second environment of its production site", async () => {
+  await withRocketNet(
+    [
+      {
+        expected: "GET /v1/sites?page=1&per_page=100",
+        body: '{"success":true,"metadata":{"page":1,"page_size":100,"total":1},"result":[{"id":285279,"domain":"example.onrocket.site","production":1,"status":"active","staging":{"staging_id":352157,"staging_status":"active"}}]}',
+      },
+      {
+        expected: "GET /v1/sites/352157",
+        body: '{"success":true,"result":{"id":352157,"domain":"example-staging.onrocket.site","production":285279,"status":"active"}}',
+      },
+    ],
+    async (client) => {
+      const sites = await client.listSites({ includeEnvironments: true });
+      assert.equal(sites.length, 1);
+      assert.equal(sites[0].id, "285279");
+      assert.deepEqual(
+        sites[0].environments.map((environment) => [
+          environment.id,
+          environment.name,
+          environment.primaryDomain,
+        ]),
+        [
+          ["285279", "live", "example.onrocket.site"],
+          ["352157", "staging", "example-staging.onrocket.site"],
+        ],
+      );
+    },
+  );
+});
+
+test("rocketnet list environments includes the staging site of a production site", async () => {
+  await withRocketNet(
+    [
+      {
+        expected: "GET /v1/sites/285279",
+        body: '{"success":true,"result":{"id":285279,"domain":"example.onrocket.site","production":1,"status":"active","staging":{"staging_id":352157,"staging_status":"active"}}}',
+      },
+      {
+        expected: "GET /v1/sites/352157",
+        body: '{"success":true,"result":{"id":352157,"domain":"example-staging.onrocket.site","production":285279,"status":"active"}}',
+      },
+    ],
+    async (client) => {
+      const environments = await client.listEnvironments("285279");
+      assert.deepEqual(
+        environments.map((environment) => [environment.id, environment.name]),
+        [
+          ["285279", "live"],
+          ["352157", "staging"],
+        ],
+      );
+    },
+  );
+});
+
+test("rocketnet does not read staging sites when environments were not requested", async () => {
+  await withRocketNet(
+    [
+      {
+        expected: "GET /v1/sites?page=1&per_page=100",
+        body: '{"success":true,"result":[{"id":285279,"domain":"example.onrocket.site","production":1,"status":"active","staging":{"staging_id":352157,"staging_status":"active"}}]}',
+      },
+    ],
+    async (client) => {
+      const sites = await client.listSites();
+      assert.equal(sites.length, 1);
+      assert.equal(sites[0].environments, undefined);
+    },
+  );
+});
+
+test("rocketnet ignores a staging site that is being deleted", async () => {
+  await withRocketNet(
+    [
+      {
+        expected: "GET /v1/sites?page=1&per_page=100",
+        body: '{"success":true,"result":[{"id":285279,"domain":"example.onrocket.site","production":1,"status":"active","staging":{"staging_id":352157,"staging_status":"deleting"}}]}',
+      },
+    ],
+    async (client) => {
+      const sites = await client.listSites({ includeEnvironments: true });
+      assert.deepEqual(
+        sites[0].environments.map((environment) => environment.name),
+        ["live"],
+      );
     },
   );
 });
